@@ -35,6 +35,7 @@ import { parseServerImport } from '@/utils/server-export';
 function SwipeableServerItem({
   server,
   currentServer,
+  isConnected,
   colors,
   onPress,
   onConnect,
@@ -44,6 +45,7 @@ function SwipeableServerItem({
 }: {
   server: ServerConfig;
   currentServer: ServerConfig | null;
+  isConnected: boolean;
   colors: ThemeColors;
   onPress: () => void;
   onConnect: () => void;
@@ -117,7 +119,10 @@ function SwipeableServerItem({
   };
 
   const serverAddress = `${server.host}${server.port != null && server.port > 0 ? `:${server.port}` : ''}`;
-  const isConnectedToThis = currentServer?.id === server.id;
+  // currentServer is kept after a disconnect (for one-tap reconnect), so the
+  // live connection state must be checked too or this row would keep showing
+  // "Disconnect" forever.
+  const isConnectedToThis = isConnected && currentServer?.id === server.id;
 
   return (
     <View>
@@ -472,6 +477,7 @@ export default function ServersSettingsScreen() {
                     key={server.id}
                     server={server}
                     currentServer={currentServer}
+                    isConnected={isConnected}
                     colors={colors}
                     onPress={() => handleEditServer(server)}
                     onConnect={() => handleConnect(server)}

@@ -76,7 +76,7 @@ export default function TorrentsScreen() {
     isRecoveringFromBackground,
     initialLoadComplete,
   } = useTorrents();
-  const { isConnected, currentServer, isLoading: serverIsLoading, connectToServer } = useServer();
+  const { isConnected, isLoading: serverIsLoading, connectToServer } = useServer();
   const { colors, isDark } = useTheme();
   const params = useLocalSearchParams<{
     magnet?: string | string[];
@@ -683,7 +683,7 @@ export default function TorrentsScreen() {
   const [connectErrors, setConnectErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (!isConnected && !currentServer) {
+    if (!isConnected) {
       setServersLoaded(false);
       ServerManager.getServers()
         .then((s) => {
@@ -695,7 +695,7 @@ export default function TorrentsScreen() {
           setServersLoaded(true);
         });
     }
-  }, [isConnected, currentServer]);
+  }, [isConnected]);
 
   const handleQuickConnect = useCallback(
     async (server: ServerConfig) => {
@@ -1065,8 +1065,11 @@ export default function TorrentsScreen() {
   ];
 
   // Early returns
-  // Only show "Not Connected" screen if no server is configured (check this FIRST)
-  if (!isConnected && !currentServer && !serverIsLoading) {
+  // Show the "Not Connected" quick-connect screen whenever there is no live
+  // connection (check this FIRST). currentServer intentionally survives a
+  // disconnect for one-tap reconnect, so it must NOT gate this screen —
+  // otherwise a disconnected app falls through to the empty torrent list.
+  if (!isConnected && !serverIsLoading) {
     return (
       <QuickConnectPanel
         savedServers={savedServers}

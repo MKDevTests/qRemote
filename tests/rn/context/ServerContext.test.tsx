@@ -27,6 +27,7 @@ jest.mock('@/services/api/client', () => ({
 jest.mock('@/services/storage', () => ({
   storageService: {
     getPreferences: jest.fn(),
+    getManualDisconnect: jest.fn(),
   },
 }));
 
@@ -68,6 +69,7 @@ async function renderProvider() {
 beforeEach(() => {
   jest.clearAllMocks();
   (storageService.getPreferences as jest.Mock).mockResolvedValue({});
+  (storageService.getManualDisconnect as jest.Mock).mockResolvedValue(false);
   (ServerManager.getCurrentServer as jest.Mock).mockResolvedValue(null);
   (ServerManager.getServers as jest.Mock).mockResolvedValue([]);
   (apiClient.getServer as jest.Mock).mockReturnValue(null);
@@ -125,6 +127,31 @@ describe('ServerContext', () => {
     await waitFor(() => expect(getLatest().isLoading).toBe(false));
     expect(ServerManager.getCurrentServer).not.toHaveBeenCalled();
     expect(getLatest().isConnected).toBe(true);
+  });
+
+  it('skips startup auto-connect after a manual disconnect but keeps the server for one-tap Connect', async () => {
+    (ServerManager.getCurrentServer as jest.Mock).mockResolvedValue(server1);
+    (storageService.getManualDisconnect as jest.Mock).mockResolvedValue(true);
+
+    const getLatest = await renderProvider();
+    await waitFor(() => expect(getLatest().isLoading).toBe(false));
+    expect(ServerManager.connectToServer).not.toHaveBeenCalled();
+    expect(getLatest().isConnected).toBe(false);
+    expect(getLatest().currentServer).toEqual(server1);
+  });
+
+  it('manual disconnect also suppresses the single-server fallback auto-connect', async () => {
+    (storageService.getPreferences as jest.Mock).mockResolvedValue({
+      autoConnectLastServer: false,
+    });
+    (ServerManager.getServers as jest.Mock).mockResolvedValue([server1]);
+    (storageService.getManualDisconnect as jest.Mock).mockResolvedValue(true);
+
+    const getLatest = await renderProvider();
+    await waitFor(() => expect(getLatest().isLoading).toBe(false));
+    expect(ServerManager.connectToServer).not.toHaveBeenCalled();
+    expect(getLatest().isConnected).toBe(false);
+    expect(getLatest().currentServer).toEqual(server1);
   });
 
   it('keeps currentServer when auto-connect fails so Settings can offer Connect', async () => {

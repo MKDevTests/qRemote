@@ -7,6 +7,7 @@ const STORAGE_KEYS = {
   SERVERS: 'servers',
   CURRENT_SERVER_ID: 'current_server_id',
   PREFERENCES: 'preferences',
+  MANUAL_DISCONNECT: 'manual_disconnect',
 } as const;
 
 const stripProtocol = (host: string): string =>
@@ -185,6 +186,26 @@ export const storageService = {
     const id = await this.getCurrentServerId();
     if (!id) return null;
     return await this.getServer(id);
+  },
+
+  /**
+   * Remember that the user explicitly disconnected, so startup auto-connect
+   * doesn't immediately re-establish the session. Cleared on any successful
+   * connect.
+   */
+  async setManualDisconnect(value: boolean): Promise<void> {
+    if (value) {
+      await AsyncStorage.setItem(STORAGE_KEYS.MANUAL_DISCONNECT, 'true');
+    } else {
+      await AsyncStorage.removeItem(STORAGE_KEYS.MANUAL_DISCONNECT);
+    }
+  },
+
+  /**
+   * Whether the last session ended with an explicit user disconnect
+   */
+  async getManualDisconnect(): Promise<boolean> {
+    return (await AsyncStorage.getItem(STORAGE_KEYS.MANUAL_DISCONNECT)) === 'true';
   },
 
   /**

@@ -7,6 +7,8 @@ jest.mock('@/services/storage', () => ({
     setCurrentServerId: jest.fn(),
     getCurrentServerId: jest.fn(),
     getCurrentServer: jest.fn(),
+    setManualDisconnect: jest.fn(),
+    getManualDisconnect: jest.fn(),
   },
 }));
 
@@ -122,6 +124,7 @@ describe('ServerManager', () => {
       await ServerManager.deleteServer('s1');
       expect(mockApiClient.setServer).toHaveBeenCalledWith(null);
       expect(mockStorage.setCurrentServerId).toHaveBeenCalledWith(null);
+      expect(mockStorage.setManualDisconnect).toHaveBeenCalledWith(false);
       expect(mockStorage.deleteServer).toHaveBeenCalledWith('s1');
     });
 
@@ -200,6 +203,7 @@ describe('ServerManager', () => {
       const result = await ServerManager.connectToServer(makeServer());
       expect(result).toBe(true);
       expect(mockStorage.setCurrentServerId).toHaveBeenCalledWith('s1');
+      expect(mockStorage.setManualDisconnect).toHaveBeenCalledWith(false);
       expect(mockApiClient.setApiVersion).toHaveBeenCalledWith('2.9');
     });
 
@@ -345,6 +349,13 @@ describe('ServerManager', () => {
       expect(mockAuth.logout).toHaveBeenCalled();
       expect(mockApiClient.setServer).toHaveBeenCalledWith(null);
       expect(mockStorage.setCurrentServerId).not.toHaveBeenCalled();
+    });
+
+    it('disconnect records the manual disconnect so startup auto-connect skips it', async () => {
+      mockApiClient.getServer.mockReturnValue(makeServer());
+      mockAuth.logout.mockResolvedValueOnce(undefined);
+      await ServerManager.disconnect();
+      expect(mockStorage.setManualDisconnect).toHaveBeenCalledWith(true);
     });
 
     it('disconnect swallows logout errors', async () => {
