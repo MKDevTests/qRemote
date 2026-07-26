@@ -29,6 +29,7 @@ export const CHANGELOG: ChangelogRelease[] = [
           'qBittorrent API key authentication (v5.2.0+ / WebAPI 2.14.1+) alongside username/password and bypass',
           'RSS feeds, auto-download rules, and RSS processing settings from Settings',
           'Server Settings (formerly Torrent List) rebuilt to mirror qBittorrent Downloads — Add Torrent, Files, Save Locations, Automatic Import, plus Advanced email notifications and automation scripts',
+          'Export and import your server list from Settings → Servers — passwords and API keys are never included in the file',
           'Custom category and tag sticker colors (Theme & Colors → Category & Tag Colors)',
           'Directory path autocomplete on save-path fields when connected to qBittorrent 5.0+',
           'Settings hub reorganized (Servers → Appearance → Server Settings → RSS → Search Plugins → Advanced), with Community links, Beer Fund / Rate, and a Connection card for Connect or Add Server',
@@ -44,15 +45,10 @@ export const CHANGELOG: ChangelogRelease[] = [
           'Delete .torrent File setting supports Never / If Added / Always (matching qBittorrent)',
           'Default Save Path is only cached locally after a successful write to the connected server',
           'Torrents sort menu opens under the sort button',
+          'Editing a server updates the Settings connection card immediately, so one-tap Connect no longer retries the old address or credentials',
           'Path autocomplete no longer doubles the path when picking a suggestion, and filters while typing a partial folder name (e.g. /dat)',
         ],
-      },
-      {
-        title: 'Maintenance',
-        items: [
-          'Internal reliability polish for Search auto-tag polling and path-field autocomplete',
-        ],
-      },
+      }
     ],
   },
   {
