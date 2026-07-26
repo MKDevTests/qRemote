@@ -1,0 +1,95 @@
+import React from 'react';
+import { render, fireEvent, screen } from '@testing-library/react-native';
+import { PathAutocompleteInput } from '@/components/PathAutocompleteInput';
+import { applicationApi } from '@/services/api/application';
+import { apiClient } from '@/services/api/client';
+import { useServer } from '@/context/ServerContext';
+
+jest.mock('@/context/ThemeContext', () => ({
+  useTheme: () => ({
+    colors: {
+      surface: '#fff',
+      text: '#000',
+      textSecondary: '#666',
+      surfaceOutline: '#ccc',
+    },
+  }),
+}));
+
+jest.mock('@/context/ServerContext', () => ({ useServer: jest.fn() }));
+
+jest.mock('@/services/api/application', () => ({
+  applicationApi: { getDirectoryContent: jest.fn() },
+}));
+
+jest.mock('@/services/api/client', () => ({
+  apiClient: { getApiFeatures: jest.fn() },
+}));
+
+describe('PathAutocompleteInput', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.mocked(useServer).mockReturnValue({ isConnected: true } as any);
+    jest.mocked(apiClient.getApiFeatures).mockReturnValue({
+      supportsGetDirectoryContent: true,
+    } as any);
+  });
+
+  it('renders no suggestions when disconnected', async () => {
+    jest.mocked(useServer).mockReturnValue({ isConnected: false } as any);
+    jest.mocked(applicationApi.getDirectoryContent).mockResolvedValue(['/data']);
+
+    const onChangeText = jest.fn();
+    await render(
+      <PathAutocompleteInput testID="path-input" value="/da" onChangeText={onChangeText} />,
+    );
+    fireEvent.changeText(screen.getByTestId('path-input'), '/da');
+
+    // Give the (non-existent) debounced fetch a chance to have fired.
+    await new Promise((r) => setTimeout(r, 400));
+
+    expect(applicationApi.getDirectoryContent).not.toHaveBeenCalled();
+  });
+
+  it('shows full paths (not bare basenames) as suggestions', async () => {
+    jest.mocked(applicationApi.getDirectoryContent).mockResolvedValue(['/data', '/downloads']);
+
+    const onChangeText = jest.fn();
+    await render(
+      <PathAutocompleteInput testID="path-input" value="/da" onChangeText={onChangeText} />,
+    );
+
+    fireEvent.changeText(screen.getByTestId('path-input'), '/da');
+
+    expect(await screen.findByText('/data')).toBeTruthy();
+    expect(screen.queryByText('data')).toBeNull();
+  });
+
+  it('immediately fetches the next directory level after a suggestion is tapped', async () => {
+    jest
+      .mocked(applicationApi.getDirectoryContent)
+      .mockResolvedValueOnce(['/data'])
+      .mockResolvedValueOnce(['/data/downloads', '/data/movies']);
+
+    const onChangeText = jest.fn();
+    const { rerender } = await render(
+      <PathAutocompleteInput testID="path-input" value="/da" onChangeText={onChangeText} />,
+    );
+
+    fireEvent.changeText(screen.getByTestId('path-input'), '/da');
+    const suggestion = await screen.findByText('/data');
+
+    fireEvent(suggestion.parent!, 'pressIn');
+
+    // applySuggestion calls onChangeText synchronously with the new value —
+    // simulate the parent re-rendering with that value, as a real screen would.
+    expect(onChangeText).toHaveBeenCalledWith('/data/');
+    rerender(
+      <PathAutocompleteInput testID="path-input" value="/data/" onChangeText={onChangeText} />,
+    );
+
+    expect(await screen.findByText('/data/downloads')).toBeTruthy();
+    expect(await screen.findByText('/data/movies')).toBeTruthy();
+    expect(applicationApi.getDirectoryContent).toHaveBeenCalledWith('/data/', 'dirs');
+  });
+});

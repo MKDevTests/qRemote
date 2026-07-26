@@ -21,8 +21,10 @@ import {
   AppStateStatus,
   Switch,
   useWindowDimensions,
+  GestureResponderEvent,
+  LayoutChangeEvent,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -51,6 +53,10 @@ import { getErrorMessage } from '@/utils/error';
 import { haptics } from '@/utils/haptics';
 
 const SPEED_HISTORY_LEN = 30;
+
+const PATH_POPOVER_WIDTH = 280;
+const PATH_POPOVER_MARGIN = 12;
+const PATH_POPOVER_ANCHOR_GAP = 8;
 
 function normalizePieceStates(data: unknown): number[] {
   if (!data) return [];
@@ -101,8 +107,9 @@ export default function TorrentDetail() {
   const { showToast } = useToast();
   const { categories, tags } = useTorrents();
   const { t } = useTranslation();
-  const { width: windowWidth } = useWindowDimensions();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const graphWidth = Math.max(120, windowWidth - 64);
+  const insets = useSafeAreaInsets();
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -123,6 +130,13 @@ export default function TorrentDetail() {
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
   const [dlHistory, setDlHistory] = useState<number[]>(() => Array(SPEED_HISTORY_LEN).fill(0));
   const [ulHistory, setUlHistory] = useState<number[]>(() => Array(SPEED_HISTORY_LEN).fill(0));
+
+  const [pathModal, setPathModal] = useState<{
+    title: string;
+    value: string;
+    anchor: { x: number; y: number };
+  } | null>(null);
+  const [pathPopoverHeight, setPathPopoverHeight] = useState<number | null>(null);
 
   const [peersModalVisible, setPeersModalVisible] = useState(false);
   const [peersData, setPeersData] = useState<
@@ -419,6 +433,16 @@ export default function TorrentDetail() {
         haptics.success();
         showToast(t('toast.hashCopied'), 'success');
       }
+    } catch (error: unknown) {
+      showToast(getErrorMessage(error), 'error');
+    }
+  };
+
+  const handleCopyPath = async (value: string) => {
+    try {
+      await Clipboard.setStringAsync(value);
+      haptics.success();
+      showToast(t('toast.pathCopied'), 'success');
     } catch (error: unknown) {
       showToast(getErrorMessage(error), 'error');
     }
@@ -983,6 +1007,31 @@ export default function TorrentDetail() {
     </TouchableOpacity>
   );
 
+  const pathRow = (label: string, value: string) => (
+    <TouchableOpacity
+      style={styles.row}
+      onPress={(e: GestureResponderEvent) => {
+        setPathPopoverHeight(null);
+        setPathModal({
+          title: label,
+          value,
+          anchor: { x: e.nativeEvent.pageX, y: e.nativeEvent.pageY },
+        });
+      }}
+      disabled={actionLoading}
+    >
+      <Text style={[styles.rowLabel, { color: colors.text }]}>{label}</Text>
+      <View style={styles.rowRight}>
+        {value ? (
+          <Text style={[styles.rowValue, { color: colors.textSecondary }]} numberOfLines={1}>
+            {value}
+          </Text>
+        ) : null}
+        <Text style={[styles.chevron, { color: colors.textSecondary }]}>›</Text>
+      </View>
+    </TouchableOpacity>
+  );
+
   const categoryBadgeRow = (label: string, category: string, onPress: () => void) => (
     <TouchableOpacity style={styles.row} onPress={onPress} disabled={actionLoading}>
       <Text style={[styles.rowLabel, { color: colors.text }]}>{label}</Text>
@@ -1398,7 +1447,9 @@ export default function TorrentDetail() {
                 torrent.max_ratio >= 0 ? torrent.max_ratio.toFixed(2) : t('common.unlimited'),
               ),
               staticRow(t('torrentDetail.seedingTime'), formatTime(torrent.seeding_time)),
-              properties && staticRow(t('torrentDetail.savePath'), properties.save_path),
+              properties && pathRow(t('torrentDetail.savePath'), properties.save_path),
+              properties?.download_path &&
+                pathRow(t('torrentDetail.downloadPath'), properties.download_path),
               categoryBadgeRow(t('torrentDetail.category'), torrent.category || '', () =>
                 setCategoryPickerVisible(true),
               ),
@@ -1700,6 +1751,85 @@ export default function TorrentDetail() {
             </View>
           </View>
         </Modal>
+
+        <Modal
+          visible={!!pathModal}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setPathModal(null)}
+        >
+          <TouchableOpacity
+            style={styles.pathPopoverOverlay}
+            activeOpacity={1}
+            onPress={() => setPathModal(null)}
+          >
+            {pathModal &&
+              (() => {
+                const minLeft = insets.left + PATH_POPOVER_MARGIN;
+                const maxLeft = windowWidth - insets.right - PATH_POPOVER_MARGIN - PATH_POPOVER_WIDTH;
+                const left = Math.max(minLeft, Math.min(pathModal.anchor.x - PATH_POPOVER_WIDTH / 2, maxLeft));
+
+                const minTop = insets.top + PATH_POPOVER_MARGIN;
+                const maxPopoverHeight = windowHeight - insets.top - insets.bottom - PATH_POPOVER_MARGIN * 2;
+                const effectiveHeight = Math.min(pathPopoverHeight ?? 0, maxPopoverHeight);
+                const maxTop = windowHeight - insets.bottom - PATH_POPOVER_MARGIN - effectiveHeight;
+                const top = Math.max(minTop, Math.min(pathModal.anchor.y + PATH_POPOVER_ANCHOR_GAP, maxTop));
+
+                return (
+                  <View
+                    onLayout={(e: LayoutChangeEvent) =>
+                      setPathPopoverHeight(e.nativeEvent.layout.height)
+                    }
+                    style={[
+                      styles.pathPopover,
+                      {
+                        left,
+                        top,
+                        maxHeight: maxPopoverHeight,
+                        backgroundColor: colors.surface,
+                        borderColor: colors.surfaceOutline,
+                        opacity: pathPopoverHeight === null ? 0 : 1,
+                      },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.pathPopoverHeader,
+                        { borderBottomColor: colors.surfaceOutline },
+                      ]}
+                    >
+                      <Text
+                        style={[styles.pathPopoverTitle, { color: colors.textSecondary }]}
+                        numberOfLines={1}
+                      >
+                        {pathModal.title}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => setPathModal(null)}
+                        accessibilityLabel={t('common.close')}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Ionicons name="close" size={18} color={colors.textSecondary} />
+                      </TouchableOpacity>
+                    </View>
+                    <ScrollView style={styles.pathPopoverScroll} bounces={false}>
+                      <Text style={[styles.pathModalValue, { color: colors.text }]}>
+                        {pathModal.value}
+                      </Text>
+                    </ScrollView>
+                    <TouchableOpacity
+                      style={[styles.pathModalCopyButton, { backgroundColor: colors.primary }]}
+                      onPress={() => handleCopyPath(pathModal.value)}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons name="copy-outline" size={16} color="#FFFFFF" />
+                      <Text style={styles.pathModalCopyButtonText}>{t('common.copy')}</Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })()}
+          </TouchableOpacity>
+        </Modal>
       </SafeAreaView>
     </>
   );
@@ -1991,6 +2121,59 @@ const styles = StyleSheet.create({
   peerClient: {
     fontSize: 12,
     marginTop: 2,
+  },
+
+  // Full-path popover (Save Path / Download Path), anchored near the tapped row
+  pathPopoverOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
+  pathPopover: {
+    position: 'absolute',
+    width: PATH_POPOVER_WIDTH,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: 14,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  pathPopoverHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  pathPopoverTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    flex: 1,
+    marginRight: 8,
+  },
+  pathPopoverScroll: {
+    maxHeight: 160,
+  },
+  pathModalValue: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  pathModalCopyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderRadius: 10,
+    paddingVertical: 10,
+  },
+  pathModalCopyButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
 
   // Category badge (also reused for tag chips)

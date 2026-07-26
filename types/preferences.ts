@@ -26,6 +26,7 @@ export type ExpandedCardField =
 export type AddTorrentDialogField =
   | 'source'
   | 'savePath'
+  | 'useDownloadPath'
   | 'category'
   | 'tags'
   | 'rename'
@@ -93,6 +94,12 @@ export interface AppPreferences {
 
   /** Default save path for new torrents */
   defaultSavePath: string;
+
+  /** Whether the add-torrent screen's "incomplete torrents" path field was last enabled */
+  lastUseDownloadPath: boolean;
+
+  /** Last incomplete-torrents download path typed on the add-torrent screen */
+  lastDownloadPath: string;
 
   /** Default download priority for new torrents (0 = normal) */
   defaultPriority: number;
@@ -169,6 +176,8 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
   cardViewMode: 'compact',
   pauseOnAdd: false,
   defaultSavePath: '',
+  lastUseDownloadPath: false,
+  lastDownloadPath: '',
   defaultPriority: 0,
   toastDuration: 3000,
   hapticFeedback: true,
@@ -184,6 +193,7 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
   addTorrentDialogueFields: {
     source: true,
     savePath: true,
+    useDownloadPath: true,
     category: true,
     tags: true,
     rename: true,

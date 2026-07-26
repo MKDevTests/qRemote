@@ -10,6 +10,7 @@ import {
   Platform,
   ActivityIndicator,
   Switch,
+  Modal,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -28,6 +29,7 @@ import { useTorrents } from '@/context/TorrentContext';
 import { torrentsApi } from '@/services/api/torrents';
 import { categoriesApi } from '@/services/api/categories';
 import { tagsApi } from '@/services/api/tags';
+import { applicationApi } from '@/services/api/application';
 import { storageService } from '@/services/storage';
 import { DEFAULT_PREFERENCES, AddTorrentDialogField } from '@/types/preferences';
 import { spacing, borderRadius } from '@/constants/spacing';
@@ -72,7 +74,11 @@ export default function AddTorrentFullScreen() {
   const [stopped, setStopped] = useState(false);
   const [skipChecking, setSkipChecking] = useState(false);
   const [rootFolder, setRootFolder] = useState(true);
-  const [autoTMM, setAutoTMM] = useState(false);
+  const [tmmMode, setTmmMode] = useState<'automatic' | 'manual'>('manual');
+  const [useDownloadPath, setUseDownloadPath] = useState(false);
+  const [downloadPath, setDownloadPath] = useState('');
+  const [serverTempPath, setServerTempPath] = useState('');
+  const [serverSavePath, setServerSavePath] = useState('');
   const [sequentialDownload, setSequentialDownload] = useState(false);
   const [firstLastPiecePrio, setFirstLastPiecePrio] = useState(false);
   const [dlLimit, setDlLimit] = useState('');
@@ -95,6 +101,8 @@ export default function AddTorrentFullScreen() {
   const [createTagVisible, setCreateTagVisible] = useState(false);
   const [pendingNewTagName, setPendingNewTagName] = useState('');
 
+  const [tmmTooltipVisible, setTmmTooltipVisible] = useState(false);
+
   useFocusEffect(
     useCallback(() => {
       const load = async () => {
@@ -115,8 +123,19 @@ export default function AddTorrentFullScreen() {
           }
           setSavePath(prefs.defaultSavePath || '');
           setStopped(!!prefs.pauseOnAdd);
+          setUseDownloadPath(!!prefs.lastUseDownloadPath);
+          setDownloadPath(prefs.lastDownloadPath || '');
+          setFirstLastPiecePrio(Number(prefs.defaultPriority) > 0);
         } catch {
           setFieldVisibility(DEFAULT_PREFERENCES.addTorrentDialogueFields);
+        }
+
+        const serverPrefs = await applicationApi.getPreferences().catch(() => null);
+        if (serverPrefs) {
+          setTmmMode(serverPrefs.auto_tmm_enabled ? 'automatic' : 'manual');
+          setServerTempPath(serverPrefs.temp_path || '');
+          setServerSavePath(serverPrefs.save_path || '');
+          if (serverPrefs.auto_tmm_enabled) setUseDownloadPath(false);
         }
       };
       load();
@@ -171,6 +190,22 @@ export default function AddTorrentFullScreen() {
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
+  const persistDownloadPathPref = useCallback(
+    async (overrides: { useDownloadPath?: boolean; downloadPath?: string }) => {
+      try {
+        const prefs = await storageService.getPreferences();
+        await storageService.savePreferences({
+          ...prefs,
+          lastUseDownloadPath: overrides.useDownloadPath ?? useDownloadPath,
+          lastDownloadPath: overrides.downloadPath ?? downloadPath,
+        });
+      } catch {
+        // Ignore save errors — this is a convenience default, not critical state.
+      }
+    },
+    [useDownloadPath, downloadPath],
+  );
+
   const applyCategorySavePath = useCallback(
     (newCategory: string) => {
       const newPath = newCategory ? categories?.[newCategory]?.savePath || '' : '';
@@ -184,14 +219,25 @@ export default function AddTorrentFullScreen() {
   const buildOptions = (): AddTorrentOptions & AddTorrentFileOptions => {
     const opts: Record<string, unknown> = {};
 
-    if (fieldVisibility.savePath && savePath.trim()) opts.savepath = savePath.trim();
+    if (fieldVisibility.savePath && tmmMode === 'manual' && savePath.trim()) {
+      opts.savepath = savePath.trim();
+    }
     if (fieldVisibility.category && category) opts.category = category;
     if (fieldVisibility.tags && tagValues.length > 0) opts.tags = tagValues;
     if (fieldVisibility.rename && rename.trim()) opts.rename = rename.trim();
     if (fieldVisibility.stopped) opts.stopped = stopped;
     if (fieldVisibility.skipChecking) opts.skip_checking = skipChecking;
     if (fieldVisibility.rootFolder) opts.root_folder = rootFolder;
-    if (fieldVisibility.autoTMM) opts.autoTMM = autoTMM;
+    if (fieldVisibility.autoTMM) opts.autoTMM = tmmMode === 'automatic';
+    if (
+      fieldVisibility.useDownloadPath &&
+      tmmMode === 'manual' &&
+      useDownloadPath &&
+      downloadPath.trim()
+    ) {
+      opts.useDownloadPath = true;
+      opts.downloadPath = downloadPath.trim();
+    }
     if (fieldVisibility.sequentialDownload) opts.sequentialDownload = sequentialDownload;
     if (fieldVisibility.firstLastPiecePrio) opts.firstLastPiecePrio = firstLastPiecePrio;
 
@@ -457,10 +503,178 @@ export default function AddTorrentFullScreen() {
               </View>
             )}
 
-            {(showField('category') || showField('savePath') || showField('tags')) && (
+            <View style={styles.section}>
+              <TouchableOpacity
+                style={[
+                  styles.primaryButton,
+                  { backgroundColor: colors.primary },
+                  adding && { opacity: 0.6 },
+                ]}
+                onPress={handleSubmit}
+                disabled={adding}
+                activeOpacity={0.8}
+              >
+                {adding ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.primaryButtonText}>{t('common.add')}</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            {(showField('autoTMM') ||
+              showField('savePath') ||
+              showField('useDownloadPath')) && (
               <View style={styles.section}>
                 <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>
                   {t('screens.addTorrent.destination').toUpperCase()}
+                </Text>
+                <View style={[styles.card, { backgroundColor: colors.surface }]}>
+                  {showField('autoTMM') && (
+                    <>
+                      <View style={styles.settingRow}>
+                        <View style={styles.settingLeft}>
+                          <Ionicons name="sync-outline" size={22} color={colors.primary} />
+                          <Text style={[styles.settingLabel, { color: colors.text }]}>
+                            {t('screens.addTorrent.autoTMM')}
+                          </Text>
+                          <TouchableOpacity
+                            onPress={() => setTmmTooltipVisible(true)}
+                            accessibilityLabel={t('common.moreInfo')}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            style={styles.infoIconButton}
+                          >
+                            <Ionicons
+                              name="information-circle-outline"
+                              size={18}
+                              color={colors.textSecondary}
+                            />
+                          </TouchableOpacity>
+                        </View>
+                        <Switch
+                          value={tmmMode === 'automatic'}
+                          onValueChange={(value) => {
+                            setTmmMode(value ? 'automatic' : 'manual');
+                            if (value && useDownloadPath) {
+                              setUseDownloadPath(false);
+                              void persistDownloadPathPref({ useDownloadPath: false });
+                            }
+                          }}
+                          trackColor={{ false: colors.surfaceOutline, true: colors.success }}
+                          ios_backgroundColor={colors.surfaceOutline}
+                        />
+                      </View>
+                      {(showField('savePath') || showField('useDownloadPath')) && (
+                        <View
+                          style={[styles.separator, { backgroundColor: colors.surfaceOutline }]}
+                        />
+                      )}
+                    </>
+                  )}
+
+                  {showField('savePath') && (
+                    <>
+                      <View style={[styles.block, tmmMode === 'automatic' && styles.disabledBlock]}>
+                        <Text style={[styles.label, { color: colors.textSecondary }]}>
+                          {t('screens.addTorrent.savePath')}
+                        </Text>
+                        <PathAutocompleteInput
+                          style={[
+                            styles.input,
+                            {
+                              backgroundColor: colors.background,
+                              color: colors.text,
+                              borderColor: colors.surfaceOutline,
+                            },
+                          ]}
+                          value={tmmMode === 'automatic' ? serverSavePath : savePath}
+                          onChangeText={setSavePath}
+                          editable={tmmMode === 'manual'}
+                          placeholder={t('screens.addTorrent.savePathPlaceholder')}
+                          placeholderTextColor={colors.textSecondary}
+                        />
+                      </View>
+                      {showField('useDownloadPath') && (
+                        <View
+                          style={[styles.separatorFull, { backgroundColor: colors.surfaceOutline }]}
+                        />
+                      )}
+                    </>
+                  )}
+
+                  {showField('useDownloadPath') && (
+                    <>
+                      <View style={styles.settingRow}>
+                        <View style={styles.settingLeft}>
+                          <Ionicons
+                            name="folder-open-outline"
+                            size={22}
+                            color={colors.primary}
+                          />
+                          <Text style={[styles.settingLabel, { color: colors.text }]}>
+                            {t('screens.addTorrent.useDownloadPath')}
+                          </Text>
+                        </View>
+                        <Switch
+                          value={useDownloadPath}
+                          disabled={tmmMode === 'automatic'}
+                          onValueChange={(value) => {
+                            setUseDownloadPath(value);
+                            if (value && !downloadPath.trim() && serverTempPath) {
+                              setDownloadPath(serverTempPath);
+                              void persistDownloadPathPref({
+                                useDownloadPath: value,
+                                downloadPath: serverTempPath,
+                              });
+                            } else {
+                              void persistDownloadPathPref({ useDownloadPath: value });
+                            }
+                          }}
+                          trackColor={{ false: colors.surfaceOutline, true: colors.success }}
+                          ios_backgroundColor={colors.surfaceOutline}
+                        />
+                      </View>
+                      <View
+                        style={[styles.separator, { backgroundColor: colors.surfaceOutline }]}
+                      />
+                      {useDownloadPath && (
+                        <View
+                          style={[
+                            styles.blockTight,
+                            tmmMode === 'automatic' && styles.disabledBlock,
+                          ]}
+                        >
+                          <Text style={[styles.label, { color: colors.textSecondary }]}>
+                            {t('screens.addTorrent.downloadPath')}
+                          </Text>
+                          <PathAutocompleteInput
+                            style={[
+                              styles.input,
+                              {
+                                backgroundColor: colors.background,
+                                color: colors.text,
+                                borderColor: colors.surfaceOutline,
+                              },
+                            ]}
+                            value={downloadPath}
+                            onChangeText={setDownloadPath}
+                            onBlur={() => void persistDownloadPathPref({})}
+                            editable={tmmMode === 'manual'}
+                            placeholder={t('screens.addTorrent.downloadPathPlaceholder')}
+                            placeholderTextColor={colors.textSecondary}
+                          />
+                        </View>
+                      )}
+                    </>
+                  )}
+                </View>
+              </View>
+            )}
+
+            {(showField('category') || showField('tags')) && (
+              <View style={styles.section}>
+                <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>
+                  {t('screens.addTorrent.categoryAndTags').toUpperCase()}
                 </Text>
                 <View style={[styles.card, { backgroundColor: colors.surface }]}>
                   {showField('category') && (
@@ -483,36 +697,9 @@ export default function AddTorrentFullScreen() {
                           <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
                         </TouchableOpacity>
                       </View>
-                      <View
-                        style={[styles.separator, { backgroundColor: colors.surfaceOutline }]}
-                      />
-                    </>
-                  )}
-
-                  {showField('savePath') && (
-                    <>
-                      <View style={styles.block}>
-                        <Text style={[styles.label, { color: colors.textSecondary }]}>
-                          {t('screens.addTorrent.savePath')}
-                        </Text>
-                        <PathAutocompleteInput
-                          style={[
-                            styles.input,
-                            {
-                              backgroundColor: colors.background,
-                              color: colors.text,
-                              borderColor: colors.surfaceOutline,
-                            },
-                          ]}
-                          value={savePath}
-                          onChangeText={setSavePath}
-                          placeholder={t('screens.addTorrent.savePathPlaceholder')}
-                          placeholderTextColor={colors.textSecondary}
-                        />
-                      </View>
                       {showField('tags') && (
                         <View
-                          style={[styles.separatorFull, { backgroundColor: colors.surfaceOutline }]}
+                          style={[styles.separator, { backgroundColor: colors.surfaceOutline }]}
                         />
                       )}
                     </>
@@ -556,7 +743,6 @@ export default function AddTorrentFullScreen() {
               showField('stopped') ||
               showField('skipChecking') ||
               showField('rootFolder') ||
-              showField('autoTMM') ||
               showField('sequentialDownload') ||
               showField('firstLastPiecePrio')) && (
               <View style={styles.section}>
@@ -651,28 +837,6 @@ export default function AddTorrentFullScreen() {
                         <Switch
                           value={rootFolder}
                           onValueChange={setRootFolder}
-                          trackColor={{ false: colors.surfaceOutline, true: colors.success }}
-                          ios_backgroundColor={colors.surfaceOutline}
-                        />
-                      </View>
-                      <View
-                        style={[styles.separator, { backgroundColor: colors.surfaceOutline }]}
-                      />
-                    </>
-                  )}
-
-                  {showField('autoTMM') && (
-                    <>
-                      <View style={styles.settingRow}>
-                        <View style={styles.settingLeft}>
-                          <Ionicons name="sync-outline" size={22} color={colors.primary} />
-                          <Text style={[styles.settingLabel, { color: colors.text }]}>
-                            {t('screens.addTorrent.autoTMM')}
-                          </Text>
-                        </View>
-                        <Switch
-                          value={autoTMM}
-                          onValueChange={setAutoTMM}
                           trackColor={{ false: colors.surfaceOutline, true: colors.success }}
                           ios_backgroundColor={colors.surfaceOutline}
                         />
@@ -873,25 +1037,6 @@ export default function AddTorrentFullScreen() {
                 </View>
               </View>
             )}
-
-            <View style={styles.section}>
-              <TouchableOpacity
-                style={[
-                  styles.primaryButton,
-                  { backgroundColor: colors.primary },
-                  adding && { opacity: 0.6 },
-                ]}
-                onPress={handleSubmit}
-                disabled={adding}
-                activeOpacity={0.8}
-              >
-                {adding ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.primaryButtonText}>{t('common.add')}</Text>
-                )}
-              </TouchableOpacity>
-            </View>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -915,6 +1060,37 @@ export default function AddTorrentFullScreen() {
         }}
         onClose={() => setCategoryPickerVisible(false)}
       />
+
+      <Modal
+        visible={tmmTooltipVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setTmmTooltipVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.tooltipOverlay}
+          activeOpacity={1}
+          onPress={() => setTmmTooltipVisible(false)}
+        >
+          <View style={[styles.tooltipContainer, { backgroundColor: colors.surface }]}>
+            <View style={styles.tooltipHeader}>
+              <Ionicons name="sync-outline" size={24} color={colors.primary} />
+              <Text style={[styles.tooltipTitle, { color: colors.text }]}>
+                {t('screens.addTorrent.autoTMM')}
+              </Text>
+            </View>
+            <Text style={[styles.tooltipText, { color: colors.text }]}>
+              {t('screens.addTorrent.tmmTooltip')}
+            </Text>
+            <TouchableOpacity
+              style={[styles.tooltipButton, { backgroundColor: colors.primary }]}
+              onPress={() => setTmmTooltipVisible(false)}
+            >
+              <Text style={styles.tooltipButtonText}>{t('server.gotIt')}</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       <MultiSelectPicker
         visible={tagsPickerVisible}
@@ -1017,6 +1193,8 @@ const styles = StyleSheet.create({
   separatorFull: { height: 1, marginLeft: 0 },
 
   block: { padding: 16, gap: 8 },
+  blockTight: { paddingHorizontal: 16, paddingTop: 0, paddingBottom: 16, gap: 8 },
+  disabledBlock: { opacity: 0.5 },
   label: { ...typography.secondary, fontSize: 12 },
   input: {
     borderWidth: 0.5,
@@ -1073,11 +1251,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     flex: 1,
+    flexShrink: 1,
     marginRight: spacing.md,
   },
-  settingLabel: { fontSize: 16, fontWeight: '500' },
-  pickerInline: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, maxWidth: 220 },
-  pickerInlineText: { fontSize: 15, fontWeight: '500' },
+  settingLabel: { fontSize: 16, fontWeight: '500', flexShrink: 1 },
+  infoIconButton: { flexShrink: 0 },
+  pickerInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    flexShrink: 0,
+    maxWidth: 220,
+  },
+  pickerInlineText: { fontSize: 15, fontWeight: '500', flexShrink: 1 },
 
   primaryButton: {
     borderRadius: borderRadius.medium,
@@ -1086,4 +1272,34 @@ const styles = StyleSheet.create({
     ...shadows.card,
   },
   primaryButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+
+  tooltipOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  tooltipContainer: {
+    borderRadius: borderRadius.large,
+    padding: spacing.xl,
+    maxWidth: 400,
+    width: '100%',
+    ...shadows.card,
+  },
+  tooltipHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  tooltipTitle: { fontSize: 20, fontWeight: '600' },
+  tooltipText: { fontSize: 15, lineHeight: 22 },
+  tooltipButton: {
+    marginTop: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.medium,
+    alignItems: 'center',
+  },
+  tooltipButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
 });

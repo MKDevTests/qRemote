@@ -233,6 +233,29 @@ describe('torrentsApi', () => {
       const formData = mockPostFormData.mock.calls[0][1] as FormData;
       expect(formData).toBeInstanceOf(FormData);
     });
+
+    it('appends useDownloadPath and downloadPath when provided', async () => {
+      mockPostFormData.mockResolvedValueOnce(undefined);
+      await torrentsApi.addTorrent('magnet:?xt=1', {
+        savepath: '/dl',
+        useDownloadPath: true,
+        downloadPath: '/dl/incomplete',
+      });
+      const formData = mockPostFormData.mock.calls[0][1] as FormData;
+      expect(formData.get('useDownloadPath')).toBe('true');
+      expect(formData.get('downloadPath')).toBe('/dl/incomplete');
+    });
+
+    it('omits downloadPath when useDownloadPath is false and no path given', async () => {
+      mockPostFormData.mockResolvedValueOnce(undefined);
+      await torrentsApi.addTorrent('magnet:?xt=1', {
+        savepath: '/dl',
+        useDownloadPath: false,
+      });
+      const formData = mockPostFormData.mock.calls[0][1] as FormData;
+      expect(formData.get('useDownloadPath')).toBe('false');
+      expect(formData.get('downloadPath')).toBeNull();
+    });
   });
 
   describe('addTorrentFile', () => {
@@ -264,6 +287,17 @@ describe('torrentsApi', () => {
         },
       );
       expect(mockPostFormData).toHaveBeenCalledWith('/api/v2/torrents/add', expect.any(FormData));
+    });
+
+    it('appends useDownloadPath and downloadPath when provided', async () => {
+      mockPostFormData.mockResolvedValueOnce(undefined);
+      await torrentsApi.addTorrentFile(
+        { uri: 'file:///a.torrent', name: 'a.torrent' },
+        { savepath: '/dl', useDownloadPath: true, downloadPath: '/dl/incomplete' },
+      );
+      const formData = mockPostFormData.mock.calls[0][1] as FormData;
+      expect(formData.get('useDownloadPath')).toBe('true');
+      expect(formData.get('downloadPath')).toBe('/dl/incomplete');
     });
   });
 

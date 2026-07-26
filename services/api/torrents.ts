@@ -205,6 +205,8 @@ export const torrentsApi = {
       sequentialDownload?: boolean;
       firstLastPiecePrio?: boolean;
       autoTMM?: boolean;
+      useDownloadPath?: boolean;
+      downloadPath?: string;
     },
   ): Promise<void> {
     const formData = new FormData();
@@ -257,6 +259,12 @@ export const torrentsApi = {
       if (options.autoTMM !== undefined) {
         formData.append('autoTMM', String(options.autoTMM));
       }
+      if (options.useDownloadPath !== undefined) {
+        formData.append('useDownloadPath', String(options.useDownloadPath));
+      }
+      if (options.downloadPath) {
+        formData.append('downloadPath', options.downloadPath);
+      }
     }
 
     await apiClient.postFormData(`/api/${API_VERSION}/torrents/add`, formData);
@@ -283,6 +291,8 @@ export const torrentsApi = {
       sequentialDownload?: boolean;
       firstLastPiecePrio?: boolean;
       autoTMM?: boolean;
+      useDownloadPath?: boolean;
+      downloadPath?: string;
     },
   ): Promise<void> {
     const formData = new FormData();
@@ -339,6 +349,12 @@ export const torrentsApi = {
       }
       if (options.autoTMM !== undefined) {
         formData.append('autoTMM', String(options.autoTMM));
+      }
+      if (options.useDownloadPath !== undefined) {
+        formData.append('useDownloadPath', String(options.useDownloadPath));
+      }
+      if (options.downloadPath) {
+        formData.append('downloadPath', options.downloadPath);
       }
     }
 
