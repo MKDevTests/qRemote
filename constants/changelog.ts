@@ -33,12 +33,12 @@ export const CHANGELOG: ChangelogRelease[] = [
           'Custom category and tag sticker colors (Theme & Colors → Category & Tag Colors)',
           'Directory path autocomplete on save-path fields when connected to qBittorrent 5.0+',
           'Settings hub reorganized (Servers → Appearance → Server Settings → RSS → Search Plugins → Advanced), with Community links, Beer Fund / Rate, and a Connection card for Connect or Add Server',
-          'Search can auto-tag downloads by tracker when the preference is enabled (label clarified; preference key unchanged)',
         ],
       },
       {
         title: 'Bugs Fixed',
         items: [
+          'The auto-tag-by-tracker search setting now actually works — the toggle previously did nothing (label clarified; preference key unchanged)',
           'Tab bar: active tab icon and label both use the accent color so the selected tab is clear',
           'RSS "Search for This" re-runs the search when tapped again for the same title',
           'Category rename migrates custom sticker colors, cleans up orphan categories on partial failure, and ignores double-tap Confirm',
