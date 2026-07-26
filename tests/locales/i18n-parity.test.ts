@@ -60,8 +60,19 @@ const COINCIDENTAL_MATCH_ALLOWLIST = new Set<string>([
   'placeholders.trackerUrl',
   'screens.search.placeholder',
   'screens.search.installPluginPlaceholder',
+  'screens.rss.addFeedPlaceholder',
+  'screens.settings.rssSmartFilterFiltersPlaceholder',
   'screens.addTorrent.savePathPlaceholder',
   'screens.settings.defaultSavePathPlaceholder',
+  'screens.settings.keepIncompleteInPathPlaceholder',
+  'screens.settings.copyTorrentFilesToPlaceholder',
+  'screens.settings.copyTorrentFilesForFinishedToPlaceholder',
+  'screens.settings.monitoredFolderPlaceholder',
+  'screens.settings.runProgramPlaceholder',
+  'screens.settings.emailFromAddressPlaceholder',
+  'screens.settings.emailToAddressPlaceholder',
+  'screens.settings.emailSmtpServerPlaceholder',
+  'screens.settings.excludedFileNamesPlaceholder',
   // "tracker" is kept as an established loanword (not translated) throughout
   // es/fr, matching how it's used elsewhere in those same locale files
   // (e.g. errors.failedToFetchTracker keeps "tracker" untranslated inline).

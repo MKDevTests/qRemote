@@ -2,7 +2,8 @@
  * api.ts — TypeScript interfaces for the qBittorrent WebUI API v2 data model.
  *
  * Key exports: ServerConfig, TorrentInfo, TorrentState, TorrentProperties, GlobalTransferInfo,
- *   MainData, ServerState, Category, Tracker, TorrentFile, FilePriority, LogEntry, PeerLogEntry
+ *   MainData, ServerState, Category, Tracker, TorrentFile, FilePriority, LogEntry, PeerLogEntry,
+ *   RssFeed, RssItemsResponse, RssRule, RssRulesResponse
  * Known issues: ApplicationPreferences uses Record<string, unknown> as the full preference schema is extensive.
  */
 
@@ -40,6 +41,11 @@ export interface ServerConfig {
   basicAuthUsername?: string;
   /** Proxy Basic Auth password (in-memory only; stored in SecureStore). */
   basicAuthPassword?: string;
+
+  /** When true, authenticate with a qBittorrent API key (v5.2.0+ / WebAPI 2.14.1+) instead of username/password login. */
+  useApiKey?: boolean;
+  /** qBittorrent API key, sent as `Authorization: Bearer <apiKey>` (in-memory only; stored in SecureStore). */
+  apiKey?: string;
 }
 
 export type ServerEndpointKind = 'primary' | 'fallback';
@@ -63,7 +69,48 @@ export interface BuildInfo {
   bitness: number;
 }
 
+/**
+ * Value for a single entry in ApplicationPreferences.scan_dirs:
+ * 0 = download into the monitored folder itself, 1 = the default save location,
+ * any other string = a custom override path ("Other...").
+ */
+export type ScanDirOverride = 0 | 1 | string;
+
 export interface ApplicationPreferences {
+  save_path?: string;
+  auto_tmm_enabled?: boolean;
+  torrent_changed_tmm_enabled?: boolean;
+  save_path_changed_tmm_enabled?: boolean;
+  category_changed_tmm_enabled?: boolean;
+  use_category_paths_in_manual_mode?: boolean;
+  torrent_content_layout?: 'Original' | 'Subfolder' | 'NoSubfolder';
+  temp_path_enabled?: boolean;
+  temp_path?: string;
+  preallocate_all?: boolean;
+  incomplete_files_ext?: boolean;
+  use_unwanted_folder?: boolean;
+  export_dir?: string;
+  export_dir_fin?: string;
+  add_to_top_of_queue?: boolean;
+  torrent_stop_condition?: 'None' | 'MetadataReceived' | 'FilesChecked';
+  merge_trackers?: boolean;
+  /** 0/1 as a boolean-ish number: whether the .torrent file is deleted after adding. */
+  auto_delete_mode?: number;
+  scan_dirs?: Record<string, ScanDirOverride>;
+  excluded_file_names_enabled?: boolean;
+  excluded_file_names?: string;
+  mail_notification_enabled?: boolean;
+  mail_notification_sender?: string;
+  mail_notification_email?: string;
+  mail_notification_smtp?: string;
+  mail_notification_encryption_type?: 'None' | 'STARTTLS' | 'SMTPS';
+  mail_notification_auth_enabled?: boolean;
+  mail_notification_username?: string;
+  mail_notification_password?: string;
+  autorun_on_torrent_added_enabled?: boolean;
+  autorun_on_torrent_added_program?: string;
+  autorun_enabled?: boolean;
+  autorun_program?: string;
   [key: string]: unknown;
 }
 
@@ -216,8 +263,8 @@ export interface GlobalTransferInfo {
   up_info_speed: number;
   up_rate_limit: number;
   use_alt_speed_limits?: boolean;
-  alt_dl_limit?: number;   // bytes/s — fetched from app/preferences, converted from kB/s
-  alt_up_limit?: number;   // bytes/s
+  alt_dl_limit?: number; // bytes/s — fetched from app/preferences, converted from kB/s
+  alt_up_limit?: number; // bytes/s
 }
 
 // Torrent Properties
@@ -343,3 +390,55 @@ export interface SearchPlugin {
   url: string;
   version: string;
 }
+
+// RSS (qBittorrent /api/v2/rss/*)
+// Available since early WebAPI v2 (well before anything else gated in this
+// file). Field shapes reconstructed from the qBittorrent WebUI API docs —
+// spot-check against a live server if a field turns out to be missing/renamed.
+export interface RssArticle {
+  id: string;
+  title: string;
+  date?: string;
+  link?: string;
+  description?: string;
+  torrentURL?: string;
+  [key: string]: unknown; // qBittorrent includes extra per-feed fields
+}
+
+export interface RssFeed {
+  uid: string;
+  url: string;
+  title?: string;
+  lastBuildDate?: string;
+  isLoading?: boolean;
+  hasError?: boolean;
+  articles?: RssArticle[];
+}
+
+/**
+ * A folder node has no `url` key — its own keys are child item names, each
+ * itself an RssFeed or a nested folder. Use isRssFeed() (utils/rss.ts) to
+ * distinguish a feed from a folder at runtime.
+ */
+export type RssTreeNode = RssFeed | { [name: string]: RssTreeNode };
+export type RssItemsResponse = { [name: string]: RssTreeNode };
+
+export interface RssRule {
+  enabled: boolean;
+  mustContain: string;
+  mustNotContain: string;
+  useRegex: boolean;
+  episodeFilter: string;
+  smartFilter: boolean;
+  previouslyMatchedEpisodes: string[];
+  affectedFeeds: string[];
+  ignoreDays: number;
+  lastMatch: string;
+  addPaused: boolean | null;
+  assignedCategory: string;
+  savePath: string;
+  torrentContentLayout: string | null;
+}
+
+export type RssRulesResponse = Record<string, RssRule>; // keyed by rule name
+export type RssMatchingArticlesResponse = Record<string, string[]>; // feed URL -> article titles

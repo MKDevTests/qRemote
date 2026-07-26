@@ -60,6 +60,24 @@ export const applicationApi = {
   },
 
   /**
+   * List directory entries on the server for path autocomplete (qBittorrent 5.0+
+   * / WebAPI >= 2.11). Without withMetadata, qBittorrent returns absolute paths
+   * (not basenames) — callers should strip to the final segment before display.
+   * Throws if dirPath isn't an absolute, existing directory — callers should
+   * treat failures as "no suggestions" rather than surfacing an error.
+   */
+  async getDirectoryContent(
+    dirPath: string,
+    mode: 'all' | 'dirs' | 'files' = 'dirs',
+  ): Promise<string[]> {
+    const response = await apiClient.get(`/api/${API_VERSION}/app/getDirectoryContent`, {
+      dirPath,
+      mode,
+    });
+    return Array.isArray(response) ? (response as string[]) : [];
+  },
+
+  /**
    * Get cookies (qBittorrent 5.0+)
    * Returns empty object on qBittorrent 4.x (404 error)
    */
