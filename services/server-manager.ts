@@ -88,6 +88,9 @@ export class ServerManager {
       );
       apiClient.setServer(null);
       await storageService.setCurrentServerId(null);
+      // The remembered "user disconnected" state belonged to this server;
+      // don't let it suppress auto-connect for a different server later.
+      await storageService.setManualDisconnect(false);
     }
     await storageService.deleteServer(id);
   }
@@ -209,6 +212,7 @@ export class ServerManager {
         try {
           const versionInfo = await applicationApi.getVersion();
           await storageService.setCurrentServerId(server.id);
+          await storageService.setManualDisconnect(false);
           apiClient.setApiVersion(versionInfo.apiVersion);
           clogInfo(
             'CONN',
@@ -240,6 +244,7 @@ export class ServerManager {
         try {
           const versionInfo = await applicationApi.getVersion();
           await storageService.setCurrentServerId(server.id);
+          await storageService.setManualDisconnect(false);
           apiClient.setApiVersion(versionInfo.apiVersion);
           clogInfo(
             'CONN',
@@ -305,7 +310,15 @@ export class ServerManager {
     );
     apiClient.setServer(null);
     // Keep currentServerId so Settings can offer one-tap reconnect to the
-    // last server, and so auto-connect-last-server still has a target.
+    // last server, and so auto-connect-last-server still has a target — but
+    // remember the explicit disconnect so startup auto-connect skips it
+    // until the user connects again. Only when a server was actually
+    // connected: the disconnect that follows deleting the current server
+    // (apiClient already cleared) must not suppress auto-connect for a
+    // different server later.
+    if (previousServer) {
+      await storageService.setManualDisconnect(true);
+    }
   }
 
   /**

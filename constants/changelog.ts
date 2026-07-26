@@ -20,8 +20,8 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
-    version: '3.8.3',
-    date: '2026-07-25',
+    version: '3.8.31',
+    date: '2026-07-26',
     sections: [
       {
         title: 'New Features',
@@ -33,12 +33,12 @@ export const CHANGELOG: ChangelogRelease[] = [
           'Custom category and tag sticker colors (Theme & Colors → Category & Tag Colors)',
           'Directory path autocomplete on save-path fields when connected to qBittorrent 5.0+',
           'Settings hub reorganized (Servers → Appearance → Server Settings → RSS → Search Plugins → Advanced), with Community links, Beer Fund / Rate, and a Connection card for Connect or Add Server',
-          'Search can auto-tag downloads by tracker when the preference is enabled (label clarified; preference key unchanged)',
         ],
       },
       {
         title: 'Bugs Fixed',
         items: [
+          'The auto-tag-by-tracker search setting now actually works — the toggle previously did nothing (label clarified; preference key unchanged)',
           'Tab bar: active tab icon and label both use the accent color so the selected tab is clear',
           'RSS "Search for This" re-runs the search when tapped again for the same title',
           'Category rename migrates custom sticker colors, cleans up orphan categories on partial failure, and ignores double-tap Confirm',
@@ -47,8 +47,13 @@ export const CHANGELOG: ChangelogRelease[] = [
           'Torrents sort menu opens under the sort button',
           'Editing a server updates the Settings connection card immediately, so one-tap Connect no longer retries the old address or credentials',
           'Path autocomplete no longer doubles the path when picking a suggestion, and filters while typing a partial folder name (e.g. /dat)',
+          'Disconnecting from a server now sticks across app launches — the app no longer auto-reconnects until you tap Connect again',
+          'Settings → Servers now correctly shows Connect after disconnecting instead of always showing Disconnect',
+          'The Torrents tab shows the Not Connected quick-connect screen when disconnected instead of the "No Torrents" empty state',
+          'The Transfer tab shows the Not Connected quick-connect screen when disconnected instead of "No transfer information"',
+          'The Logs screen shows its Not Connected message when disconnected, and clears the previous session\u2019s logs so they can\u2019t mix with the next server\u2019s',
         ],
-      }
+      },
     ],
   },
   {

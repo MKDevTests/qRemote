@@ -64,6 +64,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
       try {
         const prefs = await storageService.getPreferences();
         const autoConnectLastServer = prefs.autoConnectLastServer !== false;
+        const manualDisconnect = await storageService.getManualDisconnect();
 
         let server: ServerConfig | null = null;
 
@@ -78,7 +79,15 @@ export function ServerProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        if (server) {
+        if (server && manualDisconnect) {
+          // The user explicitly disconnected last session. Keep the server
+          // remembered so Settings can offer one-tap Connect, but stay
+          // offline until the user connects again.
+          clogInfo('CONN', 'Skipping startup auto-connect — user disconnected last session');
+          setCurrentServer(server);
+          setIsConnected(false);
+          setActiveEndpoint(null);
+        } else if (server) {
           setCurrentServer(server);
           try {
             const connected = await ServerManager.connectToServer(server);
