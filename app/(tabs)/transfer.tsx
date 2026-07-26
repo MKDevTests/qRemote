@@ -79,7 +79,7 @@ export default function TransferScreen() {
     setAltDownloadLimit,
     setAltUploadLimit,
   } = useTransfer();
-  const { isConnected, currentServer, isLoading: serverIsLoading, connectToServer } = useServer();
+  const { isConnected, isLoading: serverIsLoading, connectToServer } = useServer();
   const {
     torrents,
     serverState,
@@ -99,7 +99,7 @@ export default function TransferScreen() {
   const [connectErrors, setConnectErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (!isConnected && !currentServer) {
+    if (!isConnected) {
       setServersLoaded(false);
       ServerManager.getServers()
         .then((s) => {
@@ -111,7 +111,7 @@ export default function TransferScreen() {
           setServersLoaded(true);
         });
     }
-  }, [isConnected, currentServer]);
+  }, [isConnected]);
 
   const handleQuickConnect = useCallback(
     async (server: ServerConfig) => {
@@ -380,7 +380,10 @@ export default function TransferScreen() {
 
   // --- Early returns for disconnected / loading / error states ---
 
-  if (!isConnected && !currentServer && !serverIsLoading) {
+  // Show the quick-connect screen whenever there is no live connection.
+  // currentServer intentionally survives a disconnect (for one-tap
+  // reconnect), so it must NOT gate this screen.
+  if (!isConnected && !serverIsLoading) {
     return (
       <QuickConnectPanel
         savedServers={savedServers}

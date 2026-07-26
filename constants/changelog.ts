@@ -29,6 +29,8 @@ export const CHANGELOG: ChangelogRelease[] = [
           'Disconnecting from a server now sticks across app launches — the app no longer auto-reconnects until you tap Connect again',
           'Settings → Servers now correctly shows Connect after disconnecting instead of always showing Disconnect',
           'The Torrents tab shows the Not Connected quick-connect screen when disconnected instead of the "No Torrents" empty state',
+          'The Transfer tab shows the Not Connected quick-connect screen when disconnected instead of "No transfer information"',
+          'The Logs screen shows its Not Connected message when disconnected, and clears the previous session\u2019s logs so they can\u2019t mix with the next server\u2019s',
         ],
       },
     ],

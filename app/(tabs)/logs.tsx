@@ -26,7 +26,7 @@ import { LogEntry, PeerLogEntry } from '@/types/api';
 
 export default function LogsScreen() {
   const { t } = useTranslation();
-  const { isConnected, currentServer, isLoading: serverIsLoading } = useServer();
+  const { isConnected, isLoading: serverIsLoading } = useServer();
   const { initialLoadComplete } = useTorrents();
   const { colors, isDark } = useTheme();
   const [activeTab, setActiveTab] = useState<'app' | 'peer'>('app');
@@ -43,6 +43,21 @@ export default function LogsScreen() {
     warning: true,
     critical: true,
   });
+
+  // Drop the previous session's logs the moment the connection ends:
+  // last-log-id incremental fetching assumes a single server, so stale
+  // entries would mix with (and suppress) logs from the next connection.
+  // Render-time state adjustment (not an effect) per React guidance.
+  const [wasConnected, setWasConnected] = useState(isConnected);
+  if (wasConnected !== isConnected) {
+    setWasConnected(isConnected);
+    if (!isConnected) {
+      setAppLogs([]);
+      setPeerLogs([]);
+      setLastAppLogId(undefined);
+      setLastPeerLogId(undefined);
+    }
+  }
 
   useEffect(() => {
     if (isConnected) {
@@ -145,8 +160,10 @@ export default function LogsScreen() {
     );
   }, [peerLogs, searchQuery]);
 
-  // Only show "Not Connected" screen if no server is configured (check FIRST)
-  if (!isConnected && !currentServer && !serverIsLoading) {
+  // Show the "Not Connected" screen whenever there is no live connection
+  // (check FIRST). currentServer intentionally survives a disconnect, so it
+  // must not gate this screen.
+  if (!isConnected && !serverIsLoading) {
     return (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
         <FocusAwareStatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
