@@ -14,6 +14,7 @@ import { typography } from '@/constants/typography';
 const FIELD_ORDER: AddTorrentDialogField[] = [
   'source',
   'savePath',
+  'useDownloadPath',
   'category',
   'tags',
   'rename',
@@ -104,6 +105,10 @@ export default function AddTorrentDialogueSettingsScreen() {
       savePath: {
         icon: 'folder-outline',
         labelKey: 'screens.settings.addTorrentDialogueFields.savePath',
+      },
+      useDownloadPath: {
+        icon: 'folder-open-outline',
+        labelKey: 'screens.settings.addTorrentDialogueFields.useDownloadPath',
       },
       category: {
         icon: 'folder-open-outline',
@@ -288,9 +293,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     flex: 1,
+    flexShrink: 1,
     marginRight: spacing.md,
   },
-  settingLabel: { fontSize: 16, fontWeight: '500' },
+  settingLabel: { fontSize: 16, fontWeight: '500', flexShrink: 1 },
   settingHint: { fontSize: 12, marginTop: 1 },
   separator: { height: 1, marginLeft: 50 },
 });

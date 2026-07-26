@@ -324,7 +324,7 @@ function TorrentCardInner({
           {/* Tint layer: state color at low opacity behind fully-opaque text.
               getStateColor returns mixed formats (hex/rgb/rgba), so the tint is
               layered via View opacity instead of parsing/recomposing the color. */}
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: stateColor, opacity: 0.55 }]} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: stateColor, opacity: 0.18 }]} />
           {/* Theme text color, not the state color — state-colored text on its
               own tint can be unreadable for low-contrast states. */}
           <Text style={[styles.badgeText, { color: colors.text }]} numberOfLines={1}>

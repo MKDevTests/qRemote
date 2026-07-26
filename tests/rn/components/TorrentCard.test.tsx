@@ -100,7 +100,7 @@ describe('TorrentCard state badge', () => {
     const tintStyle = StyleSheet.flatten((tintLayer as any).props.style);
     expect(tintStyle).toMatchObject({
       backgroundColor: downloadingColor,
-      opacity: 0.55,
+      opacity: 0.18,
       position: 'absolute',
     });
     expect(StyleSheet.flatten(badge?.props.style)).toMatchObject({ overflow: 'hidden' });

@@ -33,6 +33,7 @@ export const CHANGELOG: ChangelogRelease[] = [
           'Custom category and tag sticker colors (Theme & Colors → Category & Tag Colors)',
           'Directory path autocomplete on save-path fields when connected to qBittorrent 5.0+',
           'Settings hub reorganized (Servers → Appearance → Server Settings → RSS → Search Plugins → Advanced), with Community links, Beer Fund / Rate, and a Connection card for Connect or Add Server',
+          'Add Torrent now has a Torrent Management Mode (Automatic/Manual) picker seeded from the server default, plus an optional "use another path for incomplete torrents" field',
         ],
       },
       {
@@ -47,6 +48,7 @@ export const CHANGELOG: ChangelogRelease[] = [
           'Torrents sort menu opens under the sort button',
           'Editing a server updates the Settings connection card immediately, so one-tap Connect no longer retries the old address or credentials',
           'Path autocomplete no longer doubles the path when picking a suggestion, and filters while typing a partial folder name (e.g. /dat)',
+          'Path autocomplete now shows the full path in each suggestion and immediately lists the next folder level after you tap a suggestion, instead of going blank until you retype a slash',
           'Disconnecting from a server now sticks across app launches — the app no longer auto-reconnects until you tap Connect again',
           'Settings → Servers now correctly shows Connect after disconnecting instead of always showing Disconnect',
           'The Torrents tab shows the Not Connected quick-connect screen when disconnected instead of the "No Torrents" empty state',

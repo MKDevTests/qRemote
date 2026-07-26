@@ -97,7 +97,8 @@ export function PathAutocompleteInput({
           names
             .map(toBaseName)
             .filter((name) => name.length > 0 && name.toLowerCase().startsWith(partial))
-            .slice(0, SUGGESTION_LIMIT),
+            .slice(0, SUGGESTION_LIMIT)
+            .map((name) => `${parentDir}${name}`),
         );
       } catch {
         if (fetchId !== fetchIdRef.current) return;
@@ -112,12 +113,13 @@ export function PathAutocompleteInput({
     fetchSuggestions(text);
   };
 
-  const applySuggestion = (name: string) => {
+  const applySuggestion = (path: string) => {
     cancelPendingBlurClear();
-    const lastSlash = value.lastIndexOf('/');
-    const parentDir = lastSlash >= 0 ? value.slice(0, lastSlash + 1) : '/';
-    onChangeText(`${parentDir}${name}/`);
-    setSuggestions([]);
+    const newValue = `${path}/`;
+    onChangeText(newValue);
+    // Immediately list the directory just selected instead of leaving the
+    // dropdown empty until the user types another character.
+    fetchSuggestions(newValue);
   };
 
   return (
@@ -142,14 +144,14 @@ export function PathAutocompleteInput({
             shadows.medium,
           ]}
         >
-          {suggestions.map((name) => (
+          {suggestions.map((path) => (
             <TouchableOpacity
-              key={name}
+              key={path}
               style={styles.suggestionRow}
-              onPressIn={() => applySuggestion(name)}
+              onPressIn={() => applySuggestion(path)}
             >
               <Text style={[styles.suggestionText, { color: colors.text }]} numberOfLines={1}>
-                {name}
+                {path}
               </Text>
             </TouchableOpacity>
           ))}
