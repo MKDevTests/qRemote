@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { SpeedGraph } from '@/components/SpeedGraph';
+import { SpeedGraph, niceGraphCeiling } from '@/components/SpeedGraph';
 
 jest.mock('@/context/ThemeContext', () => ({
   useTheme: () => ({ colors: require('./theme-mock').mockColors }),
@@ -27,5 +27,30 @@ describe('SpeedGraph', () => {
   it('handles all-zero data without dividing by zero', async () => {
     const { toJSON } = await render(<SpeedGraph data={[0, 0, 0]} color="#f00" />);
     expect(toJSON()).toBeTruthy();
+  });
+});
+
+describe('niceGraphCeiling', () => {
+  it('rounds a mid-range peak up to the next 1/2/5/10 step', () => {
+    // 51,000,000 B/s (~48.6 MiB/s) should round up to 50 MiB/s exactly.
+    expect(niceGraphCeiling(51_000_000)).toBe(50 * 1024 * 1024);
+  });
+
+  it('leaves an already-clean value unchanged', () => {
+    // Exactly 10 MiB/s — a plausible configured rate limit — should not get
+    // bumped to 20 MiB/s by floating-point noise at the step boundary.
+    const tenMib = 10 * 1024 * 1024;
+    expect(niceGraphCeiling(tenMib)).toBe(tenMib);
+  });
+
+  it('floors non-positive input at 1', () => {
+    expect(niceGraphCeiling(0)).toBe(1);
+    expect(niceGraphCeiling(-5)).toBe(1);
+  });
+
+  it('never rounds below the input value', () => {
+    for (const value of [1, 42, 1_500, 952_320, 51_000_000, 987_654_321]) {
+      expect(niceGraphCeiling(value)).toBeGreaterThanOrEqual(value);
+    }
   });
 });

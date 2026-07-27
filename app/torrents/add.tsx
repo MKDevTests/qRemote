@@ -522,9 +522,7 @@ export default function AddTorrentFullScreen() {
               </TouchableOpacity>
             </View>
 
-            {(showField('autoTMM') ||
-              showField('savePath') ||
-              showField('useDownloadPath')) && (
+            {(showField('autoTMM') || showField('savePath') || showField('useDownloadPath')) && (
               <View style={styles.section}>
                 <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>
                   {t('screens.addTorrent.destination').toUpperCase()}
@@ -606,11 +604,7 @@ export default function AddTorrentFullScreen() {
                     <>
                       <View style={styles.settingRow}>
                         <View style={styles.settingLeft}>
-                          <Ionicons
-                            name="folder-open-outline"
-                            size={22}
-                            color={colors.primary}
-                          />
+                          <Ionicons name="folder-open-outline" size={22} color={colors.primary} />
                           <Text style={[styles.settingLabel, { color: colors.text }]}>
                             {t('screens.addTorrent.useDownloadPath')}
                           </Text>

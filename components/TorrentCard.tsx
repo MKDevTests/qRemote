@@ -8,6 +8,7 @@ import { AnimatedProgressBar } from '@/components/AnimatedProgressBar';
 import { haptics } from '@/utils/haptics';
 import { getStateColor, getStateLabel, hasEta } from '@/utils/torrent-state';
 import { avatarColor } from '@/utils/server';
+import { describeShareLimit } from '@/utils/limit-input';
 import {
   formatSpeed,
   formatSize,
@@ -175,12 +176,12 @@ function TorrentCardInner({
   const etaVisible = hasEta(torrent.eta, torrent.progress ?? 0);
 
   // Always-on stats line (compact + detailed): percent, ETA (when meaningful),
-  // up/down speeds, ratio last. Not part of the toggleable field grid.
+  // down/up speeds, ratio last. Not part of the toggleable field grid.
   const statusLine = [
     formatProgress(torrent.progress, 0),
     etaVisible ? formatTime(torrent.eta) : null,
-    upspeed > 0 ? `${formatSpeed(upspeed)} ↑` : null,
     dlspeed > 0 ? `${formatSpeed(dlspeed)} ↓` : null,
+    upspeed > 0 ? `${formatSpeed(upspeed)} ↑` : null,
     `${(torrent.ratio ?? 0).toFixed(2)} ${t('⇅')}`,
   ]
     .filter(Boolean)
@@ -226,14 +227,22 @@ function TorrentCardInner({
         t('screens.settings.expandedCardFieldsList.peers'),
         `${torrent.num_leechs} / ${torrent.num_incomplete}`,
       );
-    if (show('ratioLimit'))
+    if (show('ratioLimit')) {
+      const described = describeShareLimit(torrent.ratio_limit, torrent.max_ratio);
+      const ratioLimitValue =
+        described.kind === 'value'
+          ? described.value.toFixed(2)
+          : described.kind === 'global'
+            ? described.effective == null
+              ? '∞'
+              : t('torrentDetail.globalLimit', { value: described.effective.toFixed(2) })
+            : '∞';
       addItem(
         'ratioLimit',
         t('screens.settings.expandedCardFieldsList.ratioLimit'),
-        torrent.ratio_limit != null && torrent.ratio_limit >= 0
-          ? torrent.ratio_limit.toFixed(2)
-          : '∞',
+        ratioLimitValue,
       );
+    }
     if (show('maxRatio'))
       addItem(
         'maxRatio',
@@ -511,14 +520,14 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: borderRadius.medium,
     borderLeftWidth: 1.5,
-    marginBottom: spacing.xs,
+    marginVertical: 2,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm - 2,
     ...shadows.card,
   },
   cardDetailed: {
     borderRadius: borderRadius.large,
-    marginBottom: spacing.sm,
+    marginVertical: 2,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
   },

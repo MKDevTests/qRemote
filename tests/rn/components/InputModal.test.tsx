@@ -312,6 +312,28 @@ describe('InputModal', () => {
       expect(onConfirm).not.toHaveBeenCalled();
     });
 
+    it('runs a preset action instead of filling the field, when provided', async () => {
+      const onConfirm = jest.fn();
+      const action = jest.fn();
+      await render(
+        <InputModal
+          visible
+          title="Limit"
+          placeholder="p"
+          onCancel={jest.fn()}
+          onConfirm={onConfirm}
+          allowEmpty
+          defaultValue="2.00"
+          presets={[{ label: 'Unlimited', value: '', action }]}
+        />,
+      );
+      await fireEvent.press(screen.getByText('Unlimited'));
+      expect(action).toHaveBeenCalledTimes(1);
+      // The field itself is untouched — the preset's action owns the effect.
+      expect(screen.getByPlaceholderText('p').props.value).toBe('2.00');
+      expect(onConfirm).not.toHaveBeenCalled();
+    });
+
     it('renders no chips when presets are omitted', async () => {
       await render(
         <InputModal

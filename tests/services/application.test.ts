@@ -52,6 +52,26 @@ describe('applicationApi', () => {
     });
   });
 
+  it('setPreferences posts the global seeding-limit keys url-encoded', async () => {
+    mockPost.mockResolvedValueOnce(undefined);
+    await applicationApi.setPreferences({
+      max_ratio_enabled: true,
+      max_ratio: 2,
+      max_ratio_act: 1,
+      max_seeding_time_enabled: true,
+      max_seeding_time: 1440,
+    });
+    expect(mockPost).toHaveBeenCalledWith('/api/v2/app/setPreferences', {
+      json: JSON.stringify({
+        max_ratio_enabled: true,
+        max_ratio: 2,
+        max_ratio_act: 1,
+        max_seeding_time_enabled: true,
+        max_seeding_time: 1440,
+      }),
+    });
+  });
+
   it('getDefaultSavePath returns path string', async () => {
     mockGet.mockResolvedValueOnce('/downloads');
     const result = await applicationApi.getDefaultSavePath();
