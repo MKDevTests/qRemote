@@ -86,9 +86,14 @@ export function isTorrentComplete(progress: number): boolean {
  * `qbittorrent-api` Python client's `TorrentState.is_complete`): a torrent is
  * "completed" once it has finished downloading and moved to an upload/seed-side
  * state, regardless of whether it's actively seeding, paused/stopped, queued,
- * checking, or stalled while in that state. Progress alone is not a reliable
- * signal here — e.g. a re-check of a finished torrent reports `checkingUP`
- * while briefly re-verifying, and `progress` can even dip below 1 mid-check.
+ * checking, or stalled while in that state.
+ *
+ * This alone is NOT sufficient to detect completion, though: qBittorrent's own
+ * state machine has a known gap where a torrent that finishes downloading while
+ * stopped (e.g. added pre-stopped over existing 100%-complete data, or stopped
+ * mid-check) can be left reporting `stoppedDL`/`pausedDL` — the "downloading"
+ * side — indefinitely, even though it never has anything left to download (see
+ * `isTorrentCompleted`, which combines this with a `progress` fallback).
  */
 export function isCompletedState(state: string): boolean {
   switch (state) {
@@ -103,6 +108,19 @@ export function isCompletedState(state: string): boolean {
     default:
       return false;
   }
+}
+
+/**
+ * The authoritative "is this torrent done" check: true if `state` is on the
+ * upload/seed side (see `isCompletedState`) OR `progress` has reached 100%.
+ * The progress fallback exists because qBittorrent doesn't always flip a
+ * torrent's state to the upload side when it finishes while stopped/paused —
+ * it can stay on `stoppedDL`/`pausedDL` with nothing left to download. Prefer
+ * this over `isCompletedState` alone whenever `progress` is available (e.g.
+ * the "Completed" filter) to avoid missing those torrents.
+ */
+export function isTorrentCompleted(state: string, progress: number): boolean {
+  return isCompletedState(state) || isTorrentComplete(progress);
 }
 
 /**

@@ -1,4 +1,10 @@
-import { getStateColor, getStateLabel, hasEta, isCompletedState } from '@/utils/torrent-state';
+import {
+  getStateColor,
+  getStateLabel,
+  hasEta,
+  isCompletedState,
+  isTorrentCompleted,
+} from '@/utils/torrent-state';
 
 const mockColors = {
   stateUploadAndDownload: '#upload-and-download',
@@ -278,5 +284,21 @@ describe('isCompletedState', () => {
     'unknown',
   ])('%s → false', (state) => {
     expect(isCompletedState(state)).toBe(false);
+  });
+});
+
+describe('isTorrentCompleted', () => {
+  it('returns true for upload-side states regardless of progress', () => {
+    expect(isTorrentCompleted('stalledUP', 1)).toBe(true);
+  });
+
+  it('returns true when progress is 100% even on a download-side state (qBittorrent leaves stopped-while-finished torrents on stoppedDL/pausedDL)', () => {
+    expect(isTorrentCompleted('stoppedDL', 1)).toBe(true);
+    expect(isTorrentCompleted('pausedDL', 1)).toBe(true);
+  });
+
+  it('returns false for a download-side state below 100% progress', () => {
+    expect(isTorrentCompleted('stoppedDL', 0.5)).toBe(false);
+    expect(isTorrentCompleted('downloading', 0.99)).toBe(false);
   });
 });

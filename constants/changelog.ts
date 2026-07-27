@@ -26,7 +26,7 @@ export const CHANGELOG: ChangelogRelease[] = [
       {
         title: 'Bugs Fixed',
         items: [
-          'Fixed torrents that finished downloading (including after a manual or automatic recheck) never showing up under the "Completed" filter — it now matches qBittorrent\'s own definition of complete instead of requiring the exact "uploading" state',
+          'Fixed torrents that finished downloading (including ones stopped/paused, checking, or queued while at 100%) never showing up under the "Completed" filter — it now matches qBittorrent\'s own definition of complete instead of requiring the exact "uploading" state, and also falls back to 100% progress for torrents qBittorrent leaves reporting a "stopped downloading" state despite having nothing left to download',
         ],
       },
     ],
