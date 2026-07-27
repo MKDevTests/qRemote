@@ -82,6 +82,30 @@ export function isTorrentComplete(progress: number): boolean {
 }
 
 /**
+ * Mirrors qBittorrent's own `TorrentImpl::isCompleted()` (and the
+ * `qbittorrent-api` Python client's `TorrentState.is_complete`): a torrent is
+ * "completed" once it has finished downloading and moved to an upload/seed-side
+ * state, regardless of whether it's actively seeding, paused/stopped, queued,
+ * checking, or stalled while in that state. Progress alone is not a reliable
+ * signal here — e.g. a re-check of a finished torrent reports `checkingUP`
+ * while briefly re-verifying, and `progress` can even dip below 1 mid-check.
+ */
+export function isCompletedState(state: string): boolean {
+  switch (state) {
+    case 'uploading':
+    case 'stalledUP':
+    case 'checkingUP':
+    case 'pausedUP':
+    case 'stoppedUP':
+    case 'queuedUP':
+    case 'forcedUP':
+      return true;
+    default:
+      return false;
+  }
+}
+
+/**
  * ETA is only meaningful while a torrent is still downloading.
  * `8640000` is qBittorrent's sentinel for an infinite/unknown ETA.
  */

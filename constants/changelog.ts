@@ -20,6 +20,18 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '3.8.33',
+    date: '2026-07-27',
+    sections: [
+      {
+        title: 'Bugs Fixed',
+        items: [
+          'Fixed torrents that finished downloading (including after a manual or automatic recheck) never showing up under the "Completed" filter — it now matches qBittorrent\'s own definition of complete instead of requiring the exact "uploading" state',
+        ],
+      },
+    ],
+  },
+  {
     version: '3.8.32',
     date: '2026-07-27',
     sections: [

@@ -1,4 +1,4 @@
-import { getStateColor, getStateLabel, hasEta } from '@/utils/torrent-state';
+import { getStateColor, getStateLabel, hasEta, isCompletedState } from '@/utils/torrent-state';
 
 const mockColors = {
   stateUploadAndDownload: '#upload-and-download',
@@ -249,5 +249,34 @@ describe('hasEta', () => {
 
   it('returns false when eta is 0', () => {
     expect(hasEta(0, 0.5)).toBe(false);
+  });
+});
+
+describe('isCompletedState', () => {
+  it.each(['uploading', 'stalledUP', 'checkingUP', 'pausedUP', 'stoppedUP', 'queuedUP', 'forcedUP'])(
+    '%s → true (matches qBittorrent isCompleted())',
+    (state) => {
+      expect(isCompletedState(state)).toBe(true);
+    },
+  );
+
+  it.each([
+    'downloading',
+    'forcedDL',
+    'metaDL',
+    'forcedMetaDL',
+    'pausedDL',
+    'stoppedDL',
+    'queuedDL',
+    'stalledDL',
+    'checkingDL',
+    'checkingResumeData',
+    'error',
+    'missingFiles',
+    'allocating',
+    'moving',
+    'unknown',
+  ])('%s → false', (state) => {
+    expect(isCompletedState(state)).toBe(false);
   });
 });
