@@ -39,6 +39,7 @@
     "forcedUp": "Принуд. отдача",
     "paused": "Пауза",
     "stopped": "Остановлено",
+    "completed": "Завершено",
     "error": "Ошибка",
     "missingFiles": "Нет файлов",
     "checking": "Проверка",

@@ -70,16 +70,24 @@ describe('getStateColor', () => {
       expect(getStateColor('pausedDL', 0.5, 0, 0, mockColors)).toBe('#paused');
     });
 
-    it('pausedUP → statePaused', () => {
-      expect(getStateColor('pausedUP', 1, 0, 0, mockColors)).toBe('#paused');
+    it('pausedUP (finished-then-stopped) → stateSeeding', () => {
+      expect(getStateColor('pausedUP', 1, 0, 0, mockColors)).toBe('#seeding');
     });
 
     it('stoppedDL → statePaused', () => {
       expect(getStateColor('stoppedDL', 0.5, 0, 0, mockColors)).toBe('#paused');
     });
 
-    it('stoppedUP → statePaused', () => {
-      expect(getStateColor('stoppedUP', 1, 0, 0, mockColors)).toBe('#paused');
+    it('stoppedUP (finished-then-stopped) → stateSeeding', () => {
+      expect(getStateColor('stoppedUP', 1, 0, 0, mockColors)).toBe('#seeding');
+    });
+
+    it('stoppedDL at 100% progress (qBittorrent state-machine gap) → stateSeeding', () => {
+      expect(getStateColor('stoppedDL', 1, 0, 0, mockColors)).toBe('#seeding');
+    });
+
+    it('pausedDL at 100% progress (qBittorrent state-machine gap) → stateSeeding', () => {
+      expect(getStateColor('pausedDL', 1, 0, 0, mockColors)).toBe('#seeding');
     });
 
     it('error → stateError', () => {
@@ -182,16 +190,24 @@ describe('getStateLabel', () => {
       expect(getStateLabel('pausedDL', 0.5, 0, 0)).toBe('Paused');
     });
 
-    it('pausedUP → "Paused"', () => {
-      expect(getStateLabel('pausedUP', 1, 0, 0)).toBe('Paused');
+    it('pausedUP (finished-then-stopped) → "Completed", matching qBittorrent\'s own WebUI', () => {
+      expect(getStateLabel('pausedUP', 1, 0, 0)).toBe('Completed');
     });
 
     it('stoppedDL → "Stopped"', () => {
       expect(getStateLabel('stoppedDL', 0.5, 0, 0)).toBe('Stopped');
     });
 
-    it('stoppedUP → "Paused"', () => {
-      expect(getStateLabel('stoppedUP', 1, 0, 0)).toBe('Paused');
+    it('stoppedUP (finished-then-stopped) → "Completed", matching qBittorrent\'s own WebUI', () => {
+      expect(getStateLabel('stoppedUP', 1, 0, 0)).toBe('Completed');
+    });
+
+    it('stoppedDL at 100% progress (qBittorrent state-machine gap) → "Completed"', () => {
+      expect(getStateLabel('stoppedDL', 1, 0, 0)).toBe('Completed');
+    });
+
+    it('pausedDL at 100% progress (qBittorrent state-machine gap) → "Completed"', () => {
+      expect(getStateLabel('pausedDL', 1, 0, 0)).toBe('Completed');
     });
 
     it('error → "Error"', () => {

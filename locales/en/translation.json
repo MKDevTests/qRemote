@@ -39,6 +39,7 @@
     "forcedUp": "Forced UP",
     "paused": "Paused",
     "stopped": "Stopped",
+    "completed": "Completed",
     "error": "Error",
     "missingFiles": "Missing Files",
     "checking": "Checking",

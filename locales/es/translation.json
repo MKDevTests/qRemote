@@ -1125,6 +1125,7 @@
     "forcedUp": "Forced UP",
     "paused": "Paused",
     "stopped": "Stopped",
+    "completed": "Completado",
     "error": "Error",
     "missingFiles": "Missing Files",
     "checking": "Checking",

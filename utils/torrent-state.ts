@@ -36,6 +36,13 @@ export function getStateColor(
 
   if (state === 'stalledUP' && progress >= 1) return colors.stateSeeding;
 
+  // qBittorrent can leave a torrent reporting a download-side stopped state
+  // (stoppedDL/pausedDL) even once it has nothing left to download — treat
+  // it the same as stoppedUP/pausedUP (see isTorrentCompleted).
+  if ((state === 'stoppedDL' || state === 'pausedDL') && progress >= 1) {
+    return colors.stateSeeding;
+  }
+
   switch (state) {
     case 'downloading':
     case 'forcedDL':
@@ -47,10 +54,13 @@ export function getStateColor(
     case 'forcedUP':
       return colors.stateUploadOnly;
     case 'pausedDL':
-    case 'pausedUP':
     case 'stoppedDL':
-    case 'stoppedUP':
       return colors.statePaused;
+    case 'pausedUP':
+    case 'stoppedUP':
+      // Stopped/paused after finishing — qBittorrent's own WebUI calls this
+      // "Completed", not "Paused"; use the same positive color as seeding.
+      return colors.stateSeeding;
     case 'error':
     case 'missingFiles':
     case 'stalledDL':
@@ -149,6 +159,13 @@ export function getStateLabel(
 
   if (state === 'stalledUP' && progress >= 1) return s('seeding', 'Seeding');
 
+  // qBittorrent can leave a torrent reporting a download-side stopped state
+  // (stoppedDL/pausedDL) even once it has nothing left to download — treat
+  // it the same as stoppedUP/pausedUP (see isTorrentCompleted).
+  if ((state === 'stoppedDL' || state === 'pausedDL') && progress >= 1) {
+    return s('completed', 'Completed');
+  }
+
   switch (state) {
     case 'downloading':
       return s('downloading', 'Downloading');
@@ -163,12 +180,15 @@ export function getStateLabel(
     case 'forcedUP':
       return s('forcedUp', 'Forced UP');
     case 'pausedDL':
-    case 'pausedUP':
       return s('paused', 'Paused');
     case 'stoppedDL':
       return s('stopped', 'Stopped');
+    case 'pausedUP':
     case 'stoppedUP':
-      return s('paused', 'Paused');
+      // Stopped/paused after finishing — qBittorrent's own WebUI calls this
+      // "Completed", not "Paused" (confirmed against its dynamicTable.js,
+      // true both for the legacy pausedUP and current stoppedUP naming).
+      return s('completed', 'Completed');
     case 'error':
       return s('error', 'Error');
     case 'missingFiles':
