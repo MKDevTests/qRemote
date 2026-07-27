@@ -926,7 +926,10 @@
     "sectionAssigned": "已分配",
     "sectionAddFromLibrary": "从库中添加",
     "sectionNewTag": "新建标签",
-    "longPressToDelete": "长按可从 qBittorrent 中删除"
+    "longPressToDelete": "长按可从 qBittorrent 中删除",
+    "globalLimit": "全局限制 ({{value}})",
+    "useGlobal": "使用全局",
+    "torrentRemoved": "该种子已不在服务器上"
   },
   "filters": {
     "all": "全部",

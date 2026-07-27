@@ -402,12 +402,63 @@ describe('torrentsApi', () => {
     });
     it('sends both limits when provided', async () => {
       mockPost.mockResolvedValueOnce(undefined);
-      await torrentsApi.setTorrentShareLimits(['h1'], 2, 60);
+      await torrentsApi.setTorrentShareLimits(['h1'], { ratioLimit: 2, seedingTimeLimit: 60 });
       expect(mockPost).toHaveBeenCalledWith('/api/v2/torrents/setShareLimits', {
         hashes: 'h1',
         ratioLimit: 2,
         seedingTimeLimit: 60,
       });
+    });
+
+    it('includes inactiveSeedingTimeLimit/shareLimitAction/shareLimitsMode on 5.x (required by qBittorrent 5.1+)', async () => {
+      mockGetApiFeatures.mockReturnValue({ supportsInactiveSeedingLimit: true });
+      mockPost.mockResolvedValueOnce(undefined);
+      await torrentsApi.setTorrentShareLimits(['h1'], { ratioLimit: 2, seedingTimeLimit: 60 });
+      expect(mockPost).toHaveBeenCalledWith('/api/v2/torrents/setShareLimits', {
+        hashes: 'h1',
+        ratioLimit: 2,
+        seedingTimeLimit: 60,
+        inactiveSeedingTimeLimit: -2,
+        shareLimitAction: 'Default',
+        shareLimitsMode: 'Default',
+      });
+    });
+
+    // Regression guard: 'Default' means "use the global setting", not "leave
+    // unchanged". Hardcoding it wiped the torrent's own share-limit action, and
+    // with a global action of "Remove torrent" the server deleted the torrent.
+    it('round-trips the current share limit action/mode instead of resetting them to Default', async () => {
+      mockGetApiFeatures.mockReturnValue({ supportsInactiveSeedingLimit: true });
+      mockPost.mockResolvedValueOnce(undefined);
+      await torrentsApi.setTorrentShareLimits(['h1'], {
+        ratioLimit: 2,
+        seedingTimeLimit: 60,
+        inactiveSeedingTimeLimit: 1440,
+        shareLimitAction: 'Remove',
+        shareLimitsMode: 'MatchAll',
+      });
+      expect(mockPost).toHaveBeenCalledWith('/api/v2/torrents/setShareLimits', {
+        hashes: 'h1',
+        ratioLimit: 2,
+        seedingTimeLimit: 60,
+        inactiveSeedingTimeLimit: 1440,
+        shareLimitAction: 'Remove',
+        shareLimitsMode: 'MatchAll',
+      });
+    });
+
+    it('uses provided inactiveSeedingTimeLimit on 5.x instead of the -2 default', async () => {
+      mockGetApiFeatures.mockReturnValue({ supportsInactiveSeedingLimit: true });
+      mockPost.mockResolvedValueOnce(undefined);
+      await torrentsApi.setTorrentShareLimits(['h1'], {
+        ratioLimit: 2,
+        seedingTimeLimit: 60,
+        inactiveSeedingTimeLimit: 30,
+      });
+      expect(mockPost).toHaveBeenCalledWith(
+        '/api/v2/torrents/setShareLimits',
+        expect.objectContaining({ inactiveSeedingTimeLimit: 30 }),
+      );
     });
   });
 

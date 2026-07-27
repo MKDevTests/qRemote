@@ -946,7 +946,10 @@
     "sectionAssigned": "Назначенные",
     "sectionAddFromLibrary": "Добавить из библиотеки",
     "sectionNewTag": "Новый тег",
-    "longPressToDelete": "Удерживайте, чтобы удалить из qBittorrent"
+    "longPressToDelete": "Удерживайте, чтобы удалить из qBittorrent",
+    "globalLimit": "Глобальный ({{value}})",
+    "useGlobal": "Глобальное",
+    "torrentRemoved": "Этого торрента больше нет на сервере"
   },
   "filters": {
     "all": "Все",

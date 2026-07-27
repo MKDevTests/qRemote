@@ -926,7 +926,10 @@
     "sectionAssigned": "Asignadas",
     "sectionAddFromLibrary": "Añadir de la biblioteca",
     "sectionNewTag": "Nueva etiqueta",
-    "longPressToDelete": "Mantén pulsado para eliminar de qBittorrent"
+    "longPressToDelete": "Mantén pulsado para eliminar de qBittorrent",
+    "globalLimit": "Global del servidor ({{value}})",
+    "useGlobal": "Usar global",
+    "torrentRemoved": "Este torrent ya no está en el servidor"
   },
   "filters": {
     "all": "Todos",

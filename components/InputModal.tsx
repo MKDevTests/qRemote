@@ -5,6 +5,13 @@ import { useTheme } from '@/context/ThemeContext';
 import { PathAutocompleteInput } from '@/components/PathAutocompleteInput';
 import { spacing, borderRadius } from '@/constants/spacing';
 import { shadows } from '@/constants/shadows';
+import { buttonStyles, buttonText } from '@/constants/buttons';
+
+/** A one-tap value, for inputs whose useful answers are hard to type (e.g. "-1"). */
+export interface InputModalPreset {
+  label: string;
+  value: string;
+}
 
 interface InputModalProps {
   visible: boolean;
@@ -14,11 +21,19 @@ interface InputModalProps {
   defaultValue?: string;
   onCancel: () => void;
   onConfirm: (value: string) => void;
-  keyboardType?: 'default' | 'numeric' | 'email-address' | 'phone-pad';
+  keyboardType?: 'default' | 'numeric' | 'email-address' | 'phone-pad' | 'numbers-and-punctuation';
   multiline?: boolean;
   allowEmpty?: boolean;
   /** Suggests directory names as the user types (qBittorrent 5.0+ only; see PathAutocompleteInput). */
   pathAutocomplete?: boolean;
+  /**
+   * Returns an error message for an invalid entry, or null when it's acceptable.
+   * While it returns a message the error is shown under the field and Confirm is
+   * disabled, so bad input can't reach the API.
+   */
+  validate?: (value: string) => string | null;
+  /** Chips that fill the field in one tap. */
+  presets?: InputModalPreset[];
 }
 
 export function InputModal({
@@ -33,23 +48,36 @@ export function InputModal({
   multiline = false,
   allowEmpty = false,
   pathAutocomplete = false,
+  validate,
+  presets,
 }: InputModalProps) {
   const { colors } = useTheme();
   const { t } = useTranslation();
   const [value, setValue] = useState(defaultValue || '');
+  const [touched, setTouched] = useState(false);
 
   // Update value when defaultValue changes (e.g., when modal opens)
   useEffect(() => {
     if (visible && defaultValue !== undefined) {
       setValue(defaultValue);
+      setTouched(false);
     }
   }, [visible, defaultValue]);
 
+  const validationError = validate ? validate(value) : null;
+  const isEmpty = value.trim() === '';
+  const canConfirm = (allowEmpty || !isEmpty) && !validationError;
+  // Don't scold the user about input they haven't typed yet.
+  const shownError = touched && validationError ? validationError : null;
+
   const handleConfirm = () => {
-    if (allowEmpty || value.trim()) {
-      onConfirm(value.trim());
+    if (!canConfirm) {
+      setTouched(true);
+      return;
     }
+    onConfirm(value.trim());
     setValue('');
+    setTouched(false);
   };
 
   const handleCancel = () => {
@@ -97,18 +125,48 @@ export function InputModal({
                 multiline && styles.inputMultiline,
                 {
                   backgroundColor: colors.background,
-                  borderColor: colors.surfaceOutline,
+                  borderColor: shownError ? colors.error : colors.surfaceOutline,
                   color: colors.text,
                 },
+                shownError != null && styles.inputWithError,
               ]}
               value={value}
-              onChangeText={setValue}
+              onChangeText={(next) => {
+                setValue(next);
+                setTouched(true);
+              }}
               placeholder={placeholder}
               placeholderTextColor={colors.textSecondary}
               keyboardType={keyboardType}
               multiline={multiline}
               autoFocus
             />
+          )}
+          {shownError && (
+            <Text style={[styles.errorText, { color: colors.error }]}>{shownError}</Text>
+          )}
+          {presets && presets.length > 0 && (
+            <View style={styles.presets}>
+              {presets.map((preset) => (
+                <TouchableOpacity
+                  key={preset.label}
+                  style={[
+                    buttonStyles.chip,
+                    {
+                      backgroundColor: colors.background,
+                      borderColor: colors.surfaceOutline,
+                      borderWidth: StyleSheet.hairlineWidth,
+                    },
+                  ]}
+                  onPress={() => {
+                    setValue(preset.value);
+                    setTouched(true);
+                  }}
+                >
+                  <Text style={[buttonText.chip, { color: colors.text }]}>{preset.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           )}
           <View style={styles.buttons}>
             <TouchableOpacity
@@ -118,8 +176,13 @@ export function InputModal({
               <Text style={[styles.buttonText, { color: colors.text }]}>{t('common.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.button, { backgroundColor: colors.primary }]}
+              style={[
+                styles.button,
+                { backgroundColor: colors.primary },
+                !canConfirm && styles.buttonDisabled,
+              ]}
               onPress={handleConfirm}
+              disabled={!canConfirm}
             >
               <Text style={[styles.buttonText, { color: colors.surface }]}>
                 {t('common.confirm')}
@@ -166,6 +229,20 @@ const styles = StyleSheet.create({
     minHeight: 100,
     textAlignVertical: 'top',
   },
+  // Tighten the gap so the error message reads as attached to the field.
+  inputWithError: {
+    marginBottom: spacing.xs,
+  },
+  errorText: {
+    fontSize: 13,
+    marginBottom: spacing.md,
+  },
+  presets: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
   buttons: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
@@ -177,6 +254,9 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.medium,
     minWidth: 80,
     alignItems: 'center',
+  },
+  buttonDisabled: {
+    opacity: 0.4,
   },
   buttonText: {
     fontSize: 16,

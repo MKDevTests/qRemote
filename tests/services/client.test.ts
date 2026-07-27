@@ -313,6 +313,22 @@ describe('apiClient', () => {
       expect(() => capturedResponseInterceptorError!(err)).toThrow(/Endpoint not found/);
     });
 
+    // The message text stays the callers' contract, but the status lets a caller
+    // tell "this torrent is gone" from "this endpoint doesn't exist" without
+    // parsing prose. The torrent detail screen relies on this.
+    it.each([[403], [404], [409], [429]])('attaches HTTP %i to the thrown error', (status) => {
+      const err = makeErr({
+        config: { baseURL: 'http://example.com', url: '/api/v2/torrents/add' },
+        response: { status },
+      });
+      try {
+        capturedResponseInterceptorError!(err);
+        throw new Error('expected the interceptor to throw');
+      } catch (thrown: unknown) {
+        expect((thrown as { status?: number }).status).toBe(status);
+      }
+    });
+
     it('normalizes ECONNABORTED to connection timeout error', () => {
       const err = makeErr({ code: 'ECONNABORTED' });
       expect(() => capturedResponseInterceptorError!(err)).toThrow(

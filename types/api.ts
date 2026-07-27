@@ -162,9 +162,17 @@ export interface TorrentInfo {
   f_l_piece_prio: boolean;
   force_start: boolean;
   hash: string;
+  /**
+   * Per-torrent inactive-seeding limit in minutes (-2 = use global, -1 = no
+   * limit). Reported from qBittorrent 5.0 / WebAPI 2.11.0 — absent on older
+   * servers. Must be echoed back on setShareLimits, see `share_limit_action`.
+   */
+  inactive_seeding_time_limit?: number;
   last_activity: number;
   magnet_uri: string;
+  /** Effective ratio limit, with a `-2` ratio_limit already resolved to the global value. */
   max_ratio: number;
+  /** Effective seeding time limit (minutes), with `-2` already resolved to the global value. */
   max_seeding_time: number;
   name: string;
   num_complete: number;
@@ -176,12 +184,25 @@ export interface TorrentInfo {
   priority: number;
   progress: number;
   ratio: number;
+  /** Per-torrent ratio limit: -2 = use global limit, -1 = no limit. Compare `max_ratio` (effective). */
   ratio_limit?: number;
   save_path: string;
   seeding_time: number;
+  /** Per-torrent seeding limit (minutes): -2 = use global, -1 = no limit. Compare `max_seeding_time`. */
   seeding_time_limit?: number;
   seen_complete: number;
   seq_dl: boolean;
+  /**
+   * What qBittorrent does when a share limit is reached, e.g. 'Default' (use the
+   * global setting), 'Stop', 'Remove', 'RemoveWithContent', 'EnableSuperSeeding'.
+   * Reported from WebAPI 2.10.4. `setShareLimits` REQUIRES this param on newer
+   * servers and applies whatever is sent, so it must be round-tripped rather
+   * than defaulted — sending 'Default' silently resets the torrent to the global
+   * action (which may be "Remove", deleting the torrent).
+   */
+  share_limit_action?: string;
+  /** Whether all or any share limit must be met, e.g. 'Default' | 'MatchAny' | 'MatchAll' (WebAPI 2.16.0+). */
+  share_limits_mode?: string;
   size: number;
   state: TorrentState;
   super_seeding: boolean;
