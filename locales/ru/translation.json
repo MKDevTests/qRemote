@@ -808,6 +808,7 @@
     "paused": "Пауза",
     "seeding": "Раздача",
     "downloading": "Загрузка",
+    "completed": "Завершено",
     "torrentNotFound": "Торрент не найден",
     "failedToLoadTorrent": "Не удалось загрузить сведения о торренте",
     "failedToUpdateTorrent": "Не удалось обновить торрент",

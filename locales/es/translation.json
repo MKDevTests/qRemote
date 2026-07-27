@@ -787,6 +787,7 @@
     "paused": "Pausado",
     "seeding": "Sembrando",
     "downloading": "Descargando",
+    "completed": "Completado",
     "torrentNotFound": "Torrent no encontrado",
     "failedToLoadTorrent": "Error al cargar los detalles del torrent",
     "failedToUpdateTorrent": "Error al actualizar el torrent",
