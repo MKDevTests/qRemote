@@ -1,4 +1,10 @@
-import { getStateColor, getStateLabel, hasEta } from '@/utils/torrent-state';
+import {
+  getStateColor,
+  getStateLabel,
+  hasEta,
+  isCompletedState,
+  isTorrentCompleted,
+} from '@/utils/torrent-state';
 
 const mockColors = {
   stateUploadAndDownload: '#upload-and-download',
@@ -64,16 +70,24 @@ describe('getStateColor', () => {
       expect(getStateColor('pausedDL', 0.5, 0, 0, mockColors)).toBe('#paused');
     });
 
-    it('pausedUP → statePaused', () => {
-      expect(getStateColor('pausedUP', 1, 0, 0, mockColors)).toBe('#paused');
+    it('pausedUP (finished-then-stopped) → stateSeeding', () => {
+      expect(getStateColor('pausedUP', 1, 0, 0, mockColors)).toBe('#seeding');
     });
 
     it('stoppedDL → statePaused', () => {
       expect(getStateColor('stoppedDL', 0.5, 0, 0, mockColors)).toBe('#paused');
     });
 
-    it('stoppedUP → statePaused', () => {
-      expect(getStateColor('stoppedUP', 1, 0, 0, mockColors)).toBe('#paused');
+    it('stoppedUP (finished-then-stopped) → stateSeeding', () => {
+      expect(getStateColor('stoppedUP', 1, 0, 0, mockColors)).toBe('#seeding');
+    });
+
+    it('stoppedDL at 100% progress (qBittorrent state-machine gap) → stateSeeding', () => {
+      expect(getStateColor('stoppedDL', 1, 0, 0, mockColors)).toBe('#seeding');
+    });
+
+    it('pausedDL at 100% progress (qBittorrent state-machine gap) → stateSeeding', () => {
+      expect(getStateColor('pausedDL', 1, 0, 0, mockColors)).toBe('#seeding');
     });
 
     it('error → stateError', () => {
@@ -176,16 +190,24 @@ describe('getStateLabel', () => {
       expect(getStateLabel('pausedDL', 0.5, 0, 0)).toBe('Paused');
     });
 
-    it('pausedUP → "Paused"', () => {
-      expect(getStateLabel('pausedUP', 1, 0, 0)).toBe('Paused');
+    it('pausedUP (finished-then-stopped) → "Completed", matching qBittorrent\'s own WebUI', () => {
+      expect(getStateLabel('pausedUP', 1, 0, 0)).toBe('Completed');
     });
 
     it('stoppedDL → "Stopped"', () => {
       expect(getStateLabel('stoppedDL', 0.5, 0, 0)).toBe('Stopped');
     });
 
-    it('stoppedUP → "Paused"', () => {
-      expect(getStateLabel('stoppedUP', 1, 0, 0)).toBe('Paused');
+    it('stoppedUP (finished-then-stopped) → "Completed", matching qBittorrent\'s own WebUI', () => {
+      expect(getStateLabel('stoppedUP', 1, 0, 0)).toBe('Completed');
+    });
+
+    it('stoppedDL at 100% progress (qBittorrent state-machine gap) → "Completed"', () => {
+      expect(getStateLabel('stoppedDL', 1, 0, 0)).toBe('Completed');
+    });
+
+    it('pausedDL at 100% progress (qBittorrent state-machine gap) → "Completed"', () => {
+      expect(getStateLabel('pausedDL', 1, 0, 0)).toBe('Completed');
     });
 
     it('error → "Error"', () => {
@@ -249,5 +271,50 @@ describe('hasEta', () => {
 
   it('returns false when eta is 0', () => {
     expect(hasEta(0, 0.5)).toBe(false);
+  });
+});
+
+describe('isCompletedState', () => {
+  it.each(['uploading', 'stalledUP', 'checkingUP', 'pausedUP', 'stoppedUP', 'queuedUP', 'forcedUP'])(
+    '%s → true (matches qBittorrent isCompleted())',
+    (state) => {
+      expect(isCompletedState(state)).toBe(true);
+    },
+  );
+
+  it.each([
+    'downloading',
+    'forcedDL',
+    'metaDL',
+    'forcedMetaDL',
+    'pausedDL',
+    'stoppedDL',
+    'queuedDL',
+    'stalledDL',
+    'checkingDL',
+    'checkingResumeData',
+    'error',
+    'missingFiles',
+    'allocating',
+    'moving',
+    'unknown',
+  ])('%s → false', (state) => {
+    expect(isCompletedState(state)).toBe(false);
+  });
+});
+
+describe('isTorrentCompleted', () => {
+  it('returns true for upload-side states regardless of progress', () => {
+    expect(isTorrentCompleted('stalledUP', 1)).toBe(true);
+  });
+
+  it('returns true when progress is 100% even on a download-side state (qBittorrent leaves stopped-while-finished torrents on stoppedDL/pausedDL)', () => {
+    expect(isTorrentCompleted('stoppedDL', 1)).toBe(true);
+    expect(isTorrentCompleted('pausedDL', 1)).toBe(true);
+  });
+
+  it('returns false for a download-side state below 100% progress', () => {
+    expect(isTorrentCompleted('stoppedDL', 0.5)).toBe(false);
+    expect(isTorrentCompleted('downloading', 0.99)).toBe(false);
   });
 });

@@ -36,6 +36,13 @@ export function getStateColor(
 
   if (state === 'stalledUP' && progress >= 1) return colors.stateSeeding;
 
+  // qBittorrent can leave a torrent reporting a download-side stopped state
+  // (stoppedDL/pausedDL) even once it has nothing left to download — treat
+  // it the same as stoppedUP/pausedUP (see isTorrentCompleted).
+  if ((state === 'stoppedDL' || state === 'pausedDL') && progress >= 1) {
+    return colors.stateSeeding;
+  }
+
   switch (state) {
     case 'downloading':
     case 'forcedDL':
@@ -47,10 +54,13 @@ export function getStateColor(
     case 'forcedUP':
       return colors.stateUploadOnly;
     case 'pausedDL':
-    case 'pausedUP':
     case 'stoppedDL':
-    case 'stoppedUP':
       return colors.statePaused;
+    case 'pausedUP':
+    case 'stoppedUP':
+      // Stopped/paused after finishing — qBittorrent's own WebUI calls this
+      // "Completed", not "Paused"; use the same positive color as seeding.
+      return colors.stateSeeding;
     case 'error':
     case 'missingFiles':
     case 'stalledDL':
@@ -82,6 +92,48 @@ export function isTorrentComplete(progress: number): boolean {
 }
 
 /**
+ * Mirrors qBittorrent's own `TorrentImpl::isCompleted()` (and the
+ * `qbittorrent-api` Python client's `TorrentState.is_complete`): a torrent is
+ * "completed" once it has finished downloading and moved to an upload/seed-side
+ * state, regardless of whether it's actively seeding, paused/stopped, queued,
+ * checking, or stalled while in that state.
+ *
+ * This alone is NOT sufficient to detect completion, though: qBittorrent's own
+ * state machine has a known gap where a torrent that finishes downloading while
+ * stopped (e.g. added pre-stopped over existing 100%-complete data, or stopped
+ * mid-check) can be left reporting `stoppedDL`/`pausedDL` — the "downloading"
+ * side — indefinitely, even though it never has anything left to download (see
+ * `isTorrentCompleted`, which combines this with a `progress` fallback).
+ */
+export function isCompletedState(state: string): boolean {
+  switch (state) {
+    case 'uploading':
+    case 'stalledUP':
+    case 'checkingUP':
+    case 'pausedUP':
+    case 'stoppedUP':
+    case 'queuedUP':
+    case 'forcedUP':
+      return true;
+    default:
+      return false;
+  }
+}
+
+/**
+ * The authoritative "is this torrent done" check: true if `state` is on the
+ * upload/seed side (see `isCompletedState`) OR `progress` has reached 100%.
+ * The progress fallback exists because qBittorrent doesn't always flip a
+ * torrent's state to the upload side when it finishes while stopped/paused —
+ * it can stay on `stoppedDL`/`pausedDL` with nothing left to download. Prefer
+ * this over `isCompletedState` alone whenever `progress` is available (e.g.
+ * the "Completed" filter) to avoid missing those torrents.
+ */
+export function isTorrentCompleted(state: string, progress: number): boolean {
+  return isCompletedState(state) || isTorrentComplete(progress);
+}
+
+/**
  * ETA is only meaningful while a torrent is still downloading.
  * `8640000` is qBittorrent's sentinel for an infinite/unknown ETA.
  */
@@ -107,6 +159,13 @@ export function getStateLabel(
 
   if (state === 'stalledUP' && progress >= 1) return s('seeding', 'Seeding');
 
+  // qBittorrent can leave a torrent reporting a download-side stopped state
+  // (stoppedDL/pausedDL) even once it has nothing left to download — treat
+  // it the same as stoppedUP/pausedUP (see isTorrentCompleted).
+  if ((state === 'stoppedDL' || state === 'pausedDL') && progress >= 1) {
+    return s('completed', 'Completed');
+  }
+
   switch (state) {
     case 'downloading':
       return s('downloading', 'Downloading');
@@ -121,12 +180,15 @@ export function getStateLabel(
     case 'forcedUP':
       return s('forcedUp', 'Forced UP');
     case 'pausedDL':
-    case 'pausedUP':
       return s('paused', 'Paused');
     case 'stoppedDL':
       return s('stopped', 'Stopped');
+    case 'pausedUP':
     case 'stoppedUP':
-      return s('paused', 'Paused');
+      // Stopped/paused after finishing — qBittorrent's own WebUI calls this
+      // "Completed", not "Paused" (confirmed against its dynamicTable.js,
+      // true both for the legacy pausedUP and current stoppedUP naming).
+      return s('completed', 'Completed');
     case 'error':
       return s('error', 'Error');
     case 'missingFiles':

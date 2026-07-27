@@ -1045,8 +1045,15 @@ export default function TorrentDetail() {
 
   if (optimisticPaused !== null) {
     if (optimisticPaused) {
-      stateColor = colors.statePaused;
-      stateLabel = t('torrentDetail.paused');
+      if (torrent.progress >= 1) {
+        // Pausing/stopping a finished torrent — qBittorrent's own WebUI
+        // calls this "Completed", not "Paused".
+        stateColor = colors.stateSeeding;
+        stateLabel = t('torrentDetail.completed');
+      } else {
+        stateColor = colors.statePaused;
+        stateLabel = t('torrentDetail.paused');
+      }
     } else {
       if (torrent.progress >= 1) {
         stateColor = colors.stateSeeding;
