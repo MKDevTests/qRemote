@@ -106,6 +106,18 @@ describe('TorrentCard state badge', () => {
     expect(StyleSheet.flatten(badge?.props.style)).toMatchObject({ overflow: 'hidden' });
   });
 
+  it('shows "states.completed" (not "states.paused") for a torrent stopped after finishing, matching qBittorrent\'s own WebUI', async () => {
+    await render(
+      <TorrentCard
+        torrent={{ ...baseTorrent, state: 'stoppedUP', progress: 1, dlspeed: 0, upspeed: 0 } as TorrentInfo}
+        onPress={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByText('states.completed')).toBeTruthy();
+    expect(screen.queryByText('states.paused')).toBeNull();
+  });
+
   it('does not render the old state dot', async () => {
     await render(<TorrentCard torrent={baseTorrent} onPress={jest.fn()} />);
 
