@@ -409,6 +409,30 @@ describe('torrentsApi', () => {
         seedingTimeLimit: 60,
       });
     });
+
+    it('includes inactiveSeedingTimeLimit/shareLimitAction/shareLimitsMode on 5.x (required by qBittorrent 5.1+)', async () => {
+      mockGetApiFeatures.mockReturnValue({ supportsInactiveSeedingLimit: true });
+      mockPost.mockResolvedValueOnce(undefined);
+      await torrentsApi.setTorrentShareLimits(['h1'], 2, 60);
+      expect(mockPost).toHaveBeenCalledWith('/api/v2/torrents/setShareLimits', {
+        hashes: 'h1',
+        ratioLimit: 2,
+        seedingTimeLimit: 60,
+        inactiveSeedingTimeLimit: -2,
+        shareLimitAction: 'Default',
+        shareLimitsMode: 'Default',
+      });
+    });
+
+    it('uses provided inactiveSeedingTimeLimit on 5.x instead of the -2 default', async () => {
+      mockGetApiFeatures.mockReturnValue({ supportsInactiveSeedingLimit: true });
+      mockPost.mockResolvedValueOnce(undefined);
+      await torrentsApi.setTorrentShareLimits(['h1'], 2, 60, 30);
+      expect(mockPost).toHaveBeenCalledWith(
+        '/api/v2/torrents/setShareLimits',
+        expect.objectContaining({ inactiveSeedingTimeLimit: 30 }),
+      );
+    });
   });
 
   describe('getTorrentUploadLimit', () => {

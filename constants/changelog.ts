@@ -27,6 +27,7 @@ export const CHANGELOG: ChangelogRelease[] = [
         title: 'Bugs Fixed',
         items: [
           'Fixed being unable to type "-1" (or "-2") for a torrent\'s ratio or seeding time share limit — the numeric keyboard had no minus-sign key',
+          'Fixed setting a torrent\'s ratio or seeding time limit failing with "Missing required parameters" on qBittorrent 5.1+',
         ],
       },
     ],

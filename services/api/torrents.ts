@@ -476,6 +476,7 @@ export const torrentsApi = {
     hashes: string[],
     ratioLimit?: number,
     seedingTimeLimit?: number,
+    inactiveSeedingTimeLimit?: number,
   ): Promise<void> {
     const params: Record<string, string | number | boolean> = {
       hashes: hashes.join('|'),
@@ -485,6 +486,15 @@ export const torrentsApi = {
     }
     if (seedingTimeLimit !== undefined) {
       params.seedingTimeLimit = seedingTimeLimit;
+    }
+    // qBittorrent 5.1+ (WebAPI 2.11.0+) requires these three params too, or
+    // setShareLimits fails with "Missing required parameters". There's no UI
+    // for shareLimitAction/shareLimitsMode yet, so send "Default" (keeps the
+    // server's existing per-torrent/global behavior unchanged).
+    if (apiClient.getApiFeatures().supportsInactiveSeedingLimit) {
+      params.inactiveSeedingTimeLimit = inactiveSeedingTimeLimit ?? -2;
+      params.shareLimitAction = 'Default';
+      params.shareLimitsMode = 'Default';
     }
     await apiClient.postUrlEncoded(`/api/${API_VERSION}/torrents/setShareLimits`, params);
   },
