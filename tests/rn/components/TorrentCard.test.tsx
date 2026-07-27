@@ -109,7 +109,9 @@ describe('TorrentCard state badge', () => {
   it('shows "states.completed" (not "states.paused") for a torrent stopped after finishing, matching qBittorrent\'s own WebUI', async () => {
     await render(
       <TorrentCard
-        torrent={{ ...baseTorrent, state: 'stoppedUP', progress: 1, dlspeed: 0, upspeed: 0 } as TorrentInfo}
+        torrent={
+          { ...baseTorrent, state: 'stoppedUP', progress: 1, dlspeed: 0, upspeed: 0 } as TorrentInfo
+        }
         onPress={jest.fn()}
       />,
     );
@@ -147,7 +149,7 @@ describe('TorrentCard stats line', () => {
     expect(screen.getByText(expected)).toBeTruthy();
   });
 
-  it('omits ETA when meaningless, puts up speed before down speed, and always keeps ratio', async () => {
+  it('omits ETA when meaningless, keeps down speed before up speed, and always keeps ratio', async () => {
     const seedingTorrent = {
       ...baseTorrent,
       progress: 1,
@@ -160,8 +162,8 @@ describe('TorrentCard stats line', () => {
 
     const expected = [
       formatProgress(1, 0),
-      `${formatSpeed(2000)} ↑`,
       `${formatSpeed(500)} ↓`,
+      `${formatSpeed(2000)} ↑`,
       '1.23 ⇅',
     ].join('  ·  ');
     expect(screen.getByText(expected)).toBeTruthy();
@@ -448,5 +450,19 @@ describe('TorrentCard expanded detail grid — stacked label-over-value cells', 
     const value = screen.getByText('/downloads/very/long/path/to/files');
     expect(value.props.numberOfLines).toBe(1);
     expect(value.props.ellipsizeMode).toBe('middle');
+  });
+
+  it('shows "Global (…)" rather than "∞" for the ratioLimit field when following the global limit', async () => {
+    await render(
+      <TorrentCard
+        torrent={{ ...baseTorrent, ratio_limit: -2, max_ratio: 2 } as TorrentInfo}
+        onPress={jest.fn()}
+        compact={false}
+        expandedCardFields={fieldsOn('ratioLimit')}
+      />,
+    );
+
+    expect(screen.getByText('torrentDetail.globalLimit')).toBeTruthy();
+    expect(screen.queryByText('∞')).toBeNull();
   });
 });

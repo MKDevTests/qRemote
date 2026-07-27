@@ -35,7 +35,7 @@ import { useToast } from '@/context/ToastContext';
 import { useTorrents } from '@/context/TorrentContext';
 import { FocusAwareStatusBar } from '@/components/FocusAwareStatusBar';
 import { AnimatedProgressBar } from '@/components/AnimatedProgressBar';
-import { SpeedGraph } from '@/components/SpeedGraph';
+import { SpeedGraph, computeSpeedGraphMax, niceGraphCeiling } from '@/components/SpeedGraph';
 import { PieceMap } from '@/components/PieceMap';
 import { InputModal, InputModalPreset } from '@/components/InputModal';
 import { ConfirmModal } from '@/components/ConfirmModal';
@@ -48,7 +48,13 @@ import { syncApi } from '@/services/api/sync';
 import { tagsApi } from '@/services/api/tags';
 import { categoriesApi } from '@/services/api/categories';
 import { TorrentProperties, Tracker, TorrentFile, TorrentInfo } from '@/types/api';
-import { formatDate, formatProgress, formatAvailability } from '@/utils/format';
+import {
+  formatDate,
+  formatProgress,
+  formatAvailability,
+  kbToBytes,
+  bytesToKb,
+} from '@/utils/format';
 import { getErrorMessage, getErrorStatus } from '@/utils/error';
 import {
   describeShareLimit,
@@ -161,6 +167,8 @@ export default function TorrentDetail() {
     allowEmpty?: boolean;
     validate?: (value: string) => string | null;
     presets?: InputModalPreset[];
+    computeHint?: (value: string) => string | null;
+    pathAutocomplete?: boolean;
     onConfirm: (value: string) => void;
   }>({ title: '', onConfirm: () => {} });
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
@@ -168,6 +176,7 @@ export default function TorrentDetail() {
   const [priorityPickerVisible, setPriorityPickerVisible] = useState(false);
   const [categoryPickerVisible, setCategoryPickerVisible] = useState(false);
   const [tagsModalVisible, setTagsModalVisible] = useState(false);
+  const [renameTooltipVisible, setRenameTooltipVisible] = useState(false);
 
   // Optimistic state for toggle rows so they feel instant
   const [optSeqDl, setOptSeqDl] = useState<boolean | null>(null);
@@ -185,8 +194,8 @@ export default function TorrentDetail() {
   }, [hash, isConnected]);
 
   const pushSpeedSample = (info: TorrentInfo | null | undefined) => {
-    const dl = (info?.dlspeed ?? 0) / 1024 / 1024;
-    const ul = (info?.upspeed ?? 0) / 1024 / 1024;
+    const dl = info?.dlspeed ?? 0;
+    const ul = info?.upspeed ?? 0;
     setDlHistory((prev) => [...prev.slice(1), dl]);
     setUlHistory((prev) => [...prev.slice(1), ul]);
   };
@@ -302,8 +311,8 @@ export default function TorrentDetail() {
       setTrackers(trackersData);
       setFiles(filesData);
       setPieceStates(normalizePieceStates(piecesData));
-      const dl = (next.dlspeed ?? 0) / 1024 / 1024;
-      const ul = (next.upspeed ?? 0) / 1024 / 1024;
+      const dl = next.dlspeed ?? 0;
+      const ul = next.upspeed ?? 0;
       setDlHistory((prev) => [...prev.slice(1), dl]);
       setUlHistory((prev) => [...prev.slice(1), ul]);
       setLastUpdatedAt(new Date());
@@ -783,28 +792,36 @@ export default function TorrentDetail() {
   const handleSetDownloadLimit = () => {
     setInputModalConfig({
       title: t('torrentDetail.setDownloadLimit'),
-      message: t('torrentDetail.enterLimitBytes'),
-      defaultValue: properties?.dl_limit?.toString() || '0',
+      message: t('screens.torrents.enterLimitKbs'),
+      defaultValue:
+        properties?.dl_limit && properties.dl_limit > 0
+          ? String(bytesToKb(properties.dl_limit))
+          : '0',
       keyboardType: 'numeric',
       allowEmpty: true,
       validate: (value: string) =>
         parseSpeedLimitInput(value) === null ? t('errors.validNumber') : null,
+      computeHint: (value: string) => {
+        const kb = parseSpeedLimitInput(value);
+        return kb && kb > 0 ? formatSpeed(kbToBytes(kb)) : null;
+      },
       onConfirm: async (value: string) => {
-        const limit = parseSpeedLimitInput(value);
-        if (limit === null) {
+        const limitKb = parseSpeedLimitInput(value);
+        if (limitKb === null) {
           showToast(t('errors.validNumber'), 'error');
           return;
         }
+        const limitBytes = kbToBytes(limitKb);
         setInputModalVisible(false);
         try {
           setActionLoading(true);
-          await torrentsApi.setTorrentDownloadLimit([torrent!.hash], limit);
+          await torrentsApi.setTorrentDownloadLimit([torrent!.hash], limitBytes);
           await new Promise((resolve) => setTimeout(resolve, 500));
           await loadTorrentData();
           haptics.success();
           showToast(
             t('torrentDetail.dlLimitSet', {
-              value: limit === 0 ? t('common.unlimited') : formatSpeed(limit),
+              value: limitBytes === 0 ? t('common.unlimited') : formatSpeed(limitBytes),
             }),
             'success',
           );
@@ -821,28 +838,36 @@ export default function TorrentDetail() {
   const handleSetUploadLimit = () => {
     setInputModalConfig({
       title: t('torrentDetail.setUploadLimit'),
-      message: t('torrentDetail.enterLimitBytes'),
-      defaultValue: properties?.up_limit?.toString() || '0',
+      message: t('screens.torrents.enterLimitKbs'),
+      defaultValue:
+        properties?.up_limit && properties.up_limit > 0
+          ? String(bytesToKb(properties.up_limit))
+          : '0',
       keyboardType: 'numeric',
       allowEmpty: true,
       validate: (value: string) =>
         parseSpeedLimitInput(value) === null ? t('errors.validNumber') : null,
+      computeHint: (value: string) => {
+        const kb = parseSpeedLimitInput(value);
+        return kb && kb > 0 ? formatSpeed(kbToBytes(kb)) : null;
+      },
       onConfirm: async (value: string) => {
-        const limit = parseSpeedLimitInput(value);
-        if (limit === null) {
+        const limitKb = parseSpeedLimitInput(value);
+        if (limitKb === null) {
           showToast(t('errors.validNumber'), 'error');
           return;
         }
+        const limitBytes = kbToBytes(limitKb);
         setInputModalVisible(false);
         try {
           setActionLoading(true);
-          await torrentsApi.setTorrentUploadLimit([torrent!.hash], limit);
+          await torrentsApi.setTorrentUploadLimit([torrent!.hash], limitBytes);
           await new Promise((resolve) => setTimeout(resolve, 500));
           await loadTorrentData();
           haptics.success();
           showToast(
             t('torrentDetail.ulLimitSet', {
-              value: limit === 0 ? t('common.unlimited') : formatSpeed(limit),
+              value: limitBytes === 0 ? t('common.unlimited') : formatSpeed(limitBytes),
             }),
             'success',
           );
@@ -863,6 +888,7 @@ export default function TorrentDetail() {
       title: t('torrentDetail.moveTo'),
       message: t('torrentDetail.enterNewSavePath'),
       defaultValue: properties?.save_path || '',
+      pathAutocomplete: true,
       onConfirm: async (value: string) => {
         setInputModalVisible(false);
         if (!value) return;
@@ -1037,6 +1063,8 @@ export default function TorrentDetail() {
   const progress = (torrent.progress || 0) * 100;
   const dlspeed = torrent.dlspeed ?? 0;
   const upspeed = torrent.upspeed ?? 0;
+  const dlSparkMax = niceGraphCeiling(computeSpeedGraphMax(dlHistory));
+  const ulSparkMax = niceGraphCeiling(computeSpeedGraphMax(ulHistory));
   const actualIsPaused = torrent.state.includes('paused') || torrent.state.includes('stopped');
   const isPaused = optimisticPaused !== null ? optimisticPaused : actualIsPaused;
 
@@ -1138,6 +1166,35 @@ export default function TorrentDetail() {
     </TouchableOpacity>
   );
 
+  /**
+   * The "Rename" row only renames the torrent's own display name — it does
+   * NOT touch the file/folder on disk, which surprises people expecting a
+   * filesystem rename. The info icon pops a one-off tooltip clarifying that,
+   * same pattern as the Auto TMM tooltip on the add-torrent screen.
+   */
+  const renameRow = (label: string, value: string, onPress: () => void) => (
+    <TouchableOpacity style={styles.row} onPress={onPress} disabled={actionLoading}>
+      <View style={styles.rowLabelWithInfo}>
+        <Text style={[styles.rowLabel, { color: colors.text }]}>{label}</Text>
+        <TouchableOpacity
+          onPress={() => setRenameTooltipVisible(true)}
+          accessibilityLabel={t('common.moreInfo')}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="information-circle-outline" size={16} color={colors.textSecondary} />
+        </TouchableOpacity>
+      </View>
+      <View style={styles.rowRight}>
+        {value ? (
+          <Text style={[styles.rowValue, { color: colors.textSecondary }]} numberOfLines={1}>
+            {value}
+          </Text>
+        ) : null}
+        <Text style={[styles.chevron, { color: colors.textSecondary }]}>›</Text>
+      </View>
+    </TouchableOpacity>
+  );
+
   const pathRow = (label: string, value: string) => (
     <TouchableOpacity
       style={styles.row}
@@ -1161,6 +1218,53 @@ export default function TorrentDetail() {
         <Text style={[styles.chevron, { color: colors.textSecondary }]}>›</Text>
       </View>
     </TouchableOpacity>
+  );
+
+  /**
+   * A path row that isn't tappable as a whole — only its two icon buttons
+   * are: an edit button that opens the path editor (with autocomplete) via
+   * `onEdit`, and an info button that pops the existing full-path popover
+   * (for when the ellipsized value doesn't tell the whole story).
+   */
+  const editablePathRow = (label: string, value: string, onEdit: () => void) => (
+    <View style={styles.row}>
+      <Text style={[styles.rowLabel, { color: colors.text }]}>{label}</Text>
+      <View style={styles.rowRight}>
+        {value ? (
+          <Text
+            style={[styles.rowValue, styles.editablePathValue, { color: colors.textSecondary }]}
+            numberOfLines={1}
+            ellipsizeMode="middle"
+          >
+            {value}
+          </Text>
+        ) : null}
+        <TouchableOpacity
+          onPress={onEdit}
+          disabled={actionLoading}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityLabel={t('common.edit')}
+        >
+          <Ionicons name="create-outline" size={20} color={colors.primary} />
+        </TouchableOpacity>
+        {value ? (
+          <TouchableOpacity
+            onPress={(e: GestureResponderEvent) => {
+              setPathPopoverHeight(null);
+              setPathModal({
+                title: label,
+                value,
+                anchor: { x: e.nativeEvent.pageX, y: e.nativeEvent.pageY },
+              });
+            }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityLabel={t('common.moreInfo')}
+          >
+            <Ionicons name="information-circle-outline" size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+        ) : null}
+      </View>
+    </View>
   );
 
   const categoryBadgeRow = (label: string, category: string, onPress: () => void) => (
@@ -1368,23 +1472,46 @@ export default function TorrentDetail() {
               </TouchableOpacity>
             </View>
 
-            <Text style={[styles.heroSizeLine, { color: colors.textSecondary }]} numberOfLines={1}>
+            <Text
+              style={[styles.heroSizeLine, { color: colors.textSecondary }]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
+            >
               {formatSize(torrent.completed)}
               {' / '}
               {formatSize(torrent.total_size > 0 ? torrent.total_size : torrent.size)}
               {torrent.amount_left > 0
-                ? `  ·  ${t('torrentDetail.amountLeft', { size: formatSize(torrent.amount_left) })}`
+                ? ` · ${t('torrentDetail.amountLeft', { size: formatSize(torrent.amount_left) })}`
                 : ''}
               {torrent.time_active > 0
-                ? `  ·  ${t('torrentDetail.activeFor', { time: formatTime(torrent.time_active) })}`
+                ? ` · ${t('torrentDetail.activeFor', { time: formatTime(torrent.time_active) })}`
                 : ''}
             </Text>
 
             <View style={styles.sparklineRow}>
-              <SpeedGraph data={dlHistory} color={colors.primary} width={graphWidth} height={36} />
+              <SpeedGraph
+                data={dlHistory}
+                color={colors.primary}
+                width={graphWidth}
+                height={36}
+                maxValue={dlSparkMax}
+              />
+              <Text style={[styles.sparklineScaleCaption, { color: colors.textSecondary }]}>
+                {t('screens.transfer.graphScale', { value: formatSpeed(dlSparkMax) })}
+              </Text>
             </View>
             <View style={[styles.sparklineRow, { marginTop: 4 }]}>
-              <SpeedGraph data={ulHistory} color={colors.success} width={graphWidth} height={28} />
+              <SpeedGraph
+                data={ulHistory}
+                color={colors.success}
+                width={graphWidth}
+                height={28}
+                maxValue={ulSparkMax}
+              />
+              <Text style={[styles.sparklineScaleCaption, { color: colors.textSecondary }]}>
+                {t('screens.transfer.graphScale', { value: formatSpeed(ulSparkMax) })}
+              </Text>
             </View>
 
             <View style={styles.heroStatsGrid}>
@@ -1448,7 +1575,12 @@ export default function TorrentDetail() {
                     >
                       {item.label}
                     </Text>
-                    <Text style={[styles.heroStatValue, { color: colors.text }]} numberOfLines={1}>
+                    <Text
+                      style={[styles.heroStatValue, { color: colors.text }]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.7}
+                    >
                       {item.value}
                     </Text>
                   </>
@@ -1559,28 +1691,12 @@ export default function TorrentDetail() {
           </Text>
           <View style={[styles.sectionCard, { backgroundColor: colors.surface }]}>
             {renderRows([
-              tappableRow(
-                t('torrentDetail.ratioLimit'),
-                shareLimitValue(torrent.ratio_limit, torrent.max_ratio, (value) =>
-                  value.toFixed(2),
+              properties &&
+                editablePathRow(
+                  t('torrentDetail.savePath'),
+                  properties.save_path,
+                  handleSetLocation,
                 ),
-                handleSetRatioLimit,
-              ),
-              tappableRow(
-                t('torrentDetail.seedingTimeLimit'),
-                shareLimitValue(torrent.seeding_time_limit, torrent.max_seeding_time, (value) =>
-                  formatTime(value * 60),
-                ),
-                handleSetSeedingTimeLimit,
-              ),
-              staticRow(
-                t('torrentDetail.maxRatio'),
-                torrent.max_ratio != null && torrent.max_ratio >= 0
-                  ? torrent.max_ratio.toFixed(2)
-                  : t('common.unlimited'),
-              ),
-              staticRow(t('torrentDetail.seedingTime'), formatTime(torrent.seeding_time)),
-              properties && pathRow(t('torrentDetail.savePath'), properties.save_path),
               properties?.download_path &&
                 pathRow(t('torrentDetail.downloadPath'), properties.download_path),
               categoryBadgeRow(t('torrentDetail.category'), torrent.category || '', () =>
@@ -1614,6 +1730,21 @@ export default function TorrentDetail() {
                   ? formatSpeed(properties.up_limit)
                   : t('common.unlimited'),
                 handleSetUploadLimit,
+              ),
+              tappableRow(
+                t('torrentDetail.maxRatio'),
+                shareLimitValue(torrent.ratio_limit, torrent.max_ratio, (value) =>
+                  value.toFixed(2),
+                ),
+                handleSetRatioLimit,
+              ),
+              staticRow(t('torrentDetail.seedingTime'), formatTime(torrent.seeding_time)),
+              tappableRow(
+                t('torrentDetail.maxSeedingTime'),
+                shareLimitValue(torrent.seeding_time_limit, torrent.max_seeding_time, (value) =>
+                  formatTime(value * 60),
+                ),
+                handleSetSeedingTimeLimit,
               ),
             ])}
           </View>
@@ -1680,12 +1811,7 @@ export default function TorrentDetail() {
                 optForceStart ?? torrent.force_start ?? false,
                 handleForceStart,
               ),
-              tappableRow(t('torrentDetail.rename'), torrent.name, handleRenameTorrent),
-              tappableRow(
-                t('torrentDetail.moveTo'),
-                properties?.save_path || '',
-                handleSetLocation,
-              ),
+              renameRow(t('torrentDetail.rename'), torrent.name, handleRenameTorrent),
             ])}
           </View>
 
@@ -1714,6 +1840,8 @@ export default function TorrentDetail() {
           allowEmpty={inputModalConfig.allowEmpty}
           validate={inputModalConfig.validate}
           presets={inputModalConfig.presets}
+          computeHint={inputModalConfig.computeHint}
+          pathAutocomplete={inputModalConfig.pathAutocomplete}
           onCancel={() => setInputModalVisible(false)}
           onConfirm={inputModalConfig.onConfirm}
         />
@@ -1817,6 +1945,37 @@ export default function TorrentDetail() {
           }}
           onClose={() => setTagsModalVisible(false)}
         />
+
+        <Modal
+          visible={renameTooltipVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setRenameTooltipVisible(false)}
+        >
+          <TouchableOpacity
+            style={styles.tooltipOverlay}
+            activeOpacity={1}
+            onPress={() => setRenameTooltipVisible(false)}
+          >
+            <View style={[styles.tooltipContainer, { backgroundColor: colors.surface }]}>
+              <View style={styles.tooltipHeader}>
+                <Ionicons name="create-outline" size={24} color={colors.primary} />
+                <Text style={[styles.tooltipTitle, { color: colors.text }]}>
+                  {t('torrentDetail.rename')}
+                </Text>
+              </View>
+              <Text style={[styles.tooltipText, { color: colors.text }]}>
+                {t('torrentDetail.renameTooltip')}
+              </Text>
+              <TouchableOpacity
+                style={[styles.tooltipButton, { backgroundColor: colors.primary }]}
+                onPress={() => setRenameTooltipVisible(false)}
+              >
+                <Text style={styles.tooltipButtonText}>{t('server.gotIt')}</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </Modal>
 
         {/* Peers Modal */}
         <Modal
@@ -2017,21 +2176,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingHorizontal: 12,
+    paddingTop: 10,
     paddingBottom: 40,
   },
 
   // Hero
   heroCard: {
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    padding: 12,
+    marginBottom: 12,
   },
   heroHeaderRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 8,
     gap: 8,
   },
   heroName: {
@@ -2055,7 +2214,7 @@ const styles = StyleSheet.create({
   progressRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   progressBarFlex: {
     flex: 1,
@@ -2071,15 +2230,21 @@ const styles = StyleSheet.create({
   heroSizeLine: {
     fontSize: 13,
     fontWeight: '500',
-    marginBottom: 10,
+    marginBottom: 6,
   },
   sparklineRow: {
     marginBottom: 2,
   },
+  sparklineScaleCaption: {
+    fontSize: 9,
+    fontWeight: '500',
+    textAlign: 'right',
+    marginTop: 1,
+  },
   heroStatsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginTop: 10,
+    marginTop: 6,
   },
   heroStatCell: {
     width: '25%',
@@ -2180,11 +2345,19 @@ const styles = StyleSheet.create({
   rowLabel: {
     fontSize: 16,
   },
+  rowLabelWithInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   rowValue: {
     fontSize: 16,
     textAlign: 'right',
     flexShrink: 1,
     maxWidth: '60%',
+  },
+  editablePathValue: {
+    maxWidth: undefined,
   },
   rowRight: {
     flexDirection: 'row',
@@ -2362,4 +2535,32 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingRight: 16,
   },
+  tooltipOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  tooltipContainer: {
+    borderRadius: 16,
+    padding: 20,
+    maxWidth: 400,
+    width: '100%',
+  },
+  tooltipHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  tooltipTitle: { fontSize: 20, fontWeight: '600' },
+  tooltipText: { fontSize: 15, lineHeight: 22 },
+  tooltipButton: {
+    marginTop: 20,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  tooltipButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
 });

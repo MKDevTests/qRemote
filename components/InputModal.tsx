@@ -11,6 +11,13 @@ import { buttonStyles, buttonText } from '@/constants/buttons';
 export interface InputModalPreset {
   label: string;
   value: string;
+  /**
+   * Escape hatch for presets whose effect isn't "fill the field" — e.g. a
+   * global "Unlimited" shortcut that actually disables a separate switch
+   * rather than writing a sentinel number. When present, this runs instead of
+   * setValue/setTouched, and is responsible for closing the modal itself.
+   */
+  action?: () => void;
 }
 
 interface InputModalProps {
@@ -34,6 +41,12 @@ interface InputModalProps {
   validate?: (value: string) => string | null;
   /** Chips that fill the field in one tap. */
   presets?: InputModalPreset[];
+  /**
+   * Live "= X" preview shown under the field, recomputed from the current value
+   * on every keystroke (e.g. converting a typed KiB/s number to its formatted
+   * speed). Return null to hide the preview for the current value.
+   */
+  computeHint?: (value: string) => string | null;
 }
 
 export function InputModal({
@@ -50,6 +63,7 @@ export function InputModal({
   pathAutocomplete = false,
   validate,
   presets,
+  computeHint,
 }: InputModalProps) {
   const { colors } = useTheme();
   const { t } = useTranslation();
@@ -64,6 +78,7 @@ export function InputModal({
     }
   }, [visible, defaultValue]);
 
+  const hint = computeHint ? computeHint(value) : null;
   const validationError = validate ? validate(value) : null;
   const isEmpty = value.trim() === '';
   const canConfirm = (allowEmpty || !isEmpty) && !validationError;
@@ -145,6 +160,9 @@ export function InputModal({
           {shownError && (
             <Text style={[styles.errorText, { color: colors.error }]}>{shownError}</Text>
           )}
+          {!shownError && hint && (
+            <Text style={[styles.hint, { color: colors.primary }]}>= {hint}</Text>
+          )}
           {presets && presets.length > 0 && (
             <View style={styles.presets}>
               {presets.map((preset) => (
@@ -159,6 +177,10 @@ export function InputModal({
                     },
                   ]}
                   onPress={() => {
+                    if (preset.action) {
+                      preset.action();
+                      return;
+                    }
                     setValue(preset.value);
                     setTouched(true);
                   }}
@@ -235,6 +257,11 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 13,
+    marginBottom: spacing.md,
+  },
+  hint: {
+    fontSize: 14,
+    fontWeight: '500',
     marginBottom: spacing.md,
   },
   presets: {

@@ -275,12 +275,17 @@ describe('hasEta', () => {
 });
 
 describe('isCompletedState', () => {
-  it.each(['uploading', 'stalledUP', 'checkingUP', 'pausedUP', 'stoppedUP', 'queuedUP', 'forcedUP'])(
-    '%s → true (matches qBittorrent isCompleted())',
-    (state) => {
-      expect(isCompletedState(state)).toBe(true);
-    },
-  );
+  it.each([
+    'uploading',
+    'stalledUP',
+    'checkingUP',
+    'pausedUP',
+    'stoppedUP',
+    'queuedUP',
+    'forcedUP',
+  ])('%s → true (matches qBittorrent isCompleted())', (state) => {
+    expect(isCompletedState(state)).toBe(true);
+  });
 
   it.each([
     'downloading',

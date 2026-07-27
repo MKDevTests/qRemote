@@ -226,7 +226,20 @@ export function TorrentProvider({ children }: { children: ReactNode }) {
               queryClient.invalidateQueries({ queryKey: ['torrents'] }).finally(() => resolve());
             });
           });
-          setIsRecoveringState(false);
+          // Only clear the recovering flag once the re-sync actually
+          // succeeded. invalidateQueries settles regardless of whether the
+          // refetch itself failed (e.g. the qBittorrent session died while
+          // backgrounded), so clearing unconditionally here briefly exposed
+          // a real "Authentication failed" error before the reactive
+          // reconnect effect (which watches queryError, above) had a chance
+          // to re-login and succeed. Leaving it set on failure means the
+          // "clear after successful fetch" effect above is what turns it
+          // off, once a subsequent poll or reconnect actually goes through —
+          // and isConnected flipping false (genuine disconnect) still falls
+          // through to the normal not-connected screen regardless.
+          if (queryClient.getQueryState(['torrents'])?.status !== 'error') {
+            setIsRecoveringState(false);
+          }
         }
       } else if (nextAppState === 'background') {
         lastActiveTime.current = Date.now();

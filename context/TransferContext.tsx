@@ -115,7 +115,16 @@ export function TransferProvider({ children }: { children: ReactNode }) {
               queryClient.invalidateQueries({ queryKey: ['transfer'] }).finally(() => resolve());
             });
           });
-          setIsRecoveringState(false);
+          // Only clear the recovering flag once the re-sync actually
+          // succeeded — see the matching comment in TorrentContext.tsx. A
+          // failed refetch (e.g. session died while backgrounded) leaves it
+          // set so the reactive reconnect effect in TorrentContext gets a
+          // chance to re-login before any "not authenticated" error shows;
+          // the "clear after successful fetch" effect above then turns it
+          // off once a subsequent poll succeeds.
+          if (queryClient.getQueryState(['transfer'])?.status !== 'error') {
+            setIsRecoveringState(false);
+          }
         }
       } else if (nextState === 'background') {
         lastActiveTime.current = Date.now();

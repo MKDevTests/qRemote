@@ -1,5 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, TextInput, TextInputProps, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import {
+  View,
+  TextInput,
+  TextInputProps,
+  TouchableOpacity,
+  Text,
+  StyleSheet,
+  ScrollView,
+} from 'react-native';
 import { useTheme } from '@/context/ThemeContext';
 import { useServer } from '@/context/ServerContext';
 import { applicationApi } from '@/services/api/application';
@@ -137,12 +145,14 @@ export function PathAutocompleteInput({
         {...rest}
       />
       {suggestions.length > 0 && (
-        <View
+        <ScrollView
           style={[
             styles.suggestions,
             { backgroundColor: colors.surface, borderColor: colors.surfaceOutline },
             shadows.medium,
           ]}
+          keyboardShouldPersistTaps="always"
+          nestedScrollEnabled
         >
           {suggestions.map((path) => (
             <TouchableOpacity
@@ -155,7 +165,7 @@ export function PathAutocompleteInput({
               </Text>
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
       )}
     </View>
   );

@@ -20,6 +20,38 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '3.8.34',
+    date: '2026-07-27',
+    sections: [
+      {
+        title: 'New Features',
+        items: [
+          'Global seeding limits (ratio, seeding time, and what happens when reached) can now be set from the Transfer tab',
+          'Added an Unlimited shortcut to the Max Ratio and Max Seeding Time editors on the Transfer tab',
+        ],
+      },
+      {
+        title: 'Bugs Fixed',
+        items: [
+          'Fixed Transfer tab speed numbers getting cut off at higher speeds',
+          'Fixed per-torrent speed limits sometimes applying the wrong units',
+          'Fixed torrent cards showing "unlimited" for a ratio limit that actually follows the global limit',
+          'Fixed the folder-path autocomplete list clipping suggestions instead of scrolling to them',
+          'Fixed a brief "not authenticated" flash when reopening the app from the background before it finished reconnecting',
+        ],
+      },
+      {
+        title: 'Maintenance',
+        items: [
+          'Simplified the torrent detail screen’s share-limit rows to remove duplicates',
+          'Torrent cards now show download speed before upload speed',
+          'Save Path on the torrent detail screen now has dedicated info and edit buttons, with folder autocomplete when editing',
+          'Added a tooltip to the torrent detail Rename row clarifying it only renames the torrent in-app, not the file on disk',
+        ],
+      },
+    ],
+  },
+  {
     version: '3.8.33',
     date: '2026-07-27',
     sections: [

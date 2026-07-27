@@ -19,51 +19,37 @@ import {
   TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useTransfer } from '@/context/TransferContext';
 import { ServerManager } from '@/services/server-manager';
-import { ServerConfig } from '@/types/api';
+import { ServerConfig, ApplicationPreferences } from '@/types/api';
 import { useServer } from '@/context/ServerContext';
 import { useTorrents } from '@/context/TorrentContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useToast } from '@/context/ToastContext';
 import { FocusAwareStatusBar } from '@/components/FocusAwareStatusBar';
 import { torrentsApi } from '@/services/api/torrents';
-import { formatSize, formatSpeed, kbToBytes, bytesToKb } from '@/utils/format';
+import { applicationApi } from '@/services/api/application';
+import { formatSize, formatSpeed, formatTime, kbToBytes, bytesToKb } from '@/utils/format';
+import { parseSpeedLimitInput } from '@/utils/limit-input';
 import { spacing } from '@/constants/spacing';
 import { typography } from '@/constants/typography';
 import { useSpeedTracker } from '@/hooks/useSpeedTracker';
-import { SpeedGraph } from '@/components/SpeedGraph';
+import { SpeedGraph, computeSpeedGraphMax, niceGraphCeiling } from '@/components/SpeedGraph';
 import { QuickConnectPanel } from '@/components/QuickConnectPanel';
-import { OptionPicker } from '@/components/OptionPicker';
+import { InputModal } from '@/components/InputModal';
+import { OptionPicker, OptionPickerItem } from '@/components/OptionPicker';
 import { getErrorMessage } from '@/utils/error';
 import { haptics } from '@/utils/haptics';
-
-const SPEED_PRESETS = [
-  { label: '∞', value: 0 },
-  { label: '512K', value: 512 },
-  { label: '1M', value: 1024 },
-  { label: '2M', value: 2048 },
-  { label: '5M', value: 5120 },
-  { label: '10M', value: 10240 },
-  { label: '20M', value: 20480 },
-  { label: '50M', value: 51200 },
-  { label: '100M', value: 102400 },
-];
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const GRAPH_HORIZONTAL_PADDING = spacing.lg * 2;
 const GRAPH_WIDTH = SCREEN_WIDTH - GRAPH_HORIZONTAL_PADDING;
-
-function buildSpeedOptions(t: (key: string, opts?: Record<string, unknown>) => string) {
-  const options = SPEED_PRESETS.map((p) => ({
-    label: p.value === 0 ? t('common.unlimited') : p.label,
-    value: String(p.value),
-  }));
-  options.push({ label: t('screens.transfer.custom'), value: 'custom' });
-  return options;
-}
+// The graph card adds its own horizontal padding, so the SVGs inside it are
+// narrower than the card's outer width.
+const GRAPH_CARD_PADDING = spacing.sm;
+const INNER_GRAPH_WIDTH = GRAPH_WIDTH - GRAPH_CARD_PADDING * 2;
 
 export default function TransferScreen() {
   const { t } = useTranslation();
@@ -142,9 +128,57 @@ export default function TransferScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  // Speed limit picker state
-  const [dlPickerVisible, setDlPickerVisible] = useState(false);
-  const [ulPickerVisible, setUlPickerVisible] = useState(false);
+  // Global seeding limits (server preferences)
+  const [ratioLimitEnabled, setRatioLimitEnabled] = useState(false);
+  const [maxRatio, setMaxRatio] = useState(0);
+  const [seedingTimeLimitEnabled, setSeedingTimeLimitEnabled] = useState(false);
+  const [maxSeedingTime, setMaxSeedingTime] = useState(0);
+  const [maxRatioAct, setMaxRatioAct] = useState(0);
+  const [maxRatioModalVisible, setMaxRatioModalVisible] = useState(false);
+  const [maxSeedingTimeModalVisible, setMaxSeedingTimeModalVisible] = useState(false);
+  const [maxRatioActPickerVisible, setMaxRatioActPickerVisible] = useState(false);
+
+  const loadSeedingLimits = useCallback(async () => {
+    try {
+      const prefs = (await applicationApi.getPreferences()) as ApplicationPreferences;
+      setRatioLimitEnabled(!!prefs.max_ratio_enabled);
+      setMaxRatio(typeof prefs.max_ratio === 'number' ? prefs.max_ratio : 0);
+      setSeedingTimeLimitEnabled(!!prefs.max_seeding_time_enabled);
+      setMaxSeedingTime(typeof prefs.max_seeding_time === 'number' ? prefs.max_seeding_time : 0);
+      setMaxRatioAct(typeof prefs.max_ratio_act === 'number' ? prefs.max_ratio_act : 0);
+    } catch {
+      // Not connected / failed to load — leave previous state
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (isConnected) {
+        loadSeedingLimits();
+      }
+    }, [isConnected, loadSeedingLimits]),
+  );
+
+  const setSeedingLimitPreference = async <K extends keyof ApplicationPreferences>(
+    key: K,
+    value: ApplicationPreferences[K],
+    applyLocally: () => void,
+    rollback: () => void,
+  ) => {
+    applyLocally();
+    try {
+      await applicationApi.setPreferences({ [key]: value });
+      showToast(t('toast.serverSettingUpdated'), 'success');
+    } catch {
+      rollback();
+      showToast(t('errors.failedToUpdateServerSetting'), 'error');
+    }
+  };
+
+  const maxRatioActOptions: OptionPickerItem[] = [
+    { label: t('screens.transfer.actionPause'), value: '0' },
+    { label: t('screens.transfer.actionRemove'), value: '1' },
+  ];
 
   // Custom limit modal state
   const [limitModalVisible, setLimitModalVisible] = useState(false);
@@ -170,7 +204,21 @@ export default function TransferScreen() {
   );
   const uploadGraphData = useMemo(() => speedData.map((point) => point.uploadSpeed), [speedData]);
 
-  const speedOptions = useMemo(() => buildSpeedOptions(t), [t]);
+  // Both lines share one scale (matches qBittorrent's own WebUI chart), rounded
+  // up to a clean number so the top edge reads as "50 MiB/s", not "47.3 MiB/s".
+  const graphMax = useMemo(() => {
+    const rawMax = Math.max(
+      computeSpeedGraphMax(
+        downloadGraphData,
+        transferInfo && transferInfo.dl_rate_limit > 0 ? transferInfo.dl_rate_limit : undefined,
+      ),
+      computeSpeedGraphMax(
+        uploadGraphData,
+        transferInfo && transferInfo.up_rate_limit > 0 ? transferInfo.up_rate_limit : undefined,
+      ),
+    );
+    return niceGraphCeiling(rawMax);
+  }, [downloadGraphData, uploadGraphData, transferInfo]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -273,41 +321,12 @@ export default function TransferScreen() {
     }
   };
 
-  const handleSpeedPickerSelect = async (type: 'download' | 'upload', value: string) => {
-    if (value === 'custom') {
-      const currentLimit =
-        type === 'download' ? transferInfo?.dl_rate_limit : transferInfo?.up_rate_limit;
-      setLimitType(type);
-      setLimitInput(currentLimit && currentLimit > 0 ? String(bytesToKb(currentLimit)) : '');
-      setLimitModalVisible(true);
-      return;
-    }
-    const kbValue = parseInt(value, 10);
-    setSettingLimit(true);
-    try {
-      const bytesValue = kbToBytes(kbValue);
-      if (type === 'download') {
-        await setDownloadLimit(bytesValue);
-        showToast(
-          kbValue === 0
-            ? t('screens.transfer.downloadLimitRemoved')
-            : t('screens.transfer.downloadLimitSet', { value: kbValue }),
-          'success',
-        );
-      } else {
-        await setUploadLimit(bytesValue);
-        showToast(
-          kbValue === 0
-            ? t('screens.transfer.uploadLimitRemoved')
-            : t('screens.transfer.uploadLimitSet', { value: kbValue }),
-          'success',
-        );
-      }
-    } catch (err: unknown) {
-      showToast(getErrorMessage(err), 'error');
-    } finally {
-      setSettingLimit(false);
-    }
+  const openLimitModal = (type: 'download' | 'upload') => {
+    const currentLimit =
+      type === 'download' ? transferInfo?.dl_rate_limit : transferInfo?.up_rate_limit;
+    setLimitType(type);
+    setLimitInput(currentLimit && currentLimit > 0 ? String(bytesToKb(currentLimit)) : '');
+    setLimitModalVisible(true);
   };
 
   const handleLimitSubmit = async () => {
@@ -342,8 +361,20 @@ export default function TransferScreen() {
         const limitInBytes = kbToBytes(limit);
         if (limitType === 'download') {
           await setDownloadLimit(limitInBytes);
+          showToast(
+            limit === 0
+              ? t('screens.transfer.downloadLimitRemoved')
+              : t('screens.transfer.downloadLimitSet', { value: Math.round(limit) }),
+            'success',
+          );
         } else {
           await setUploadLimit(limitInBytes);
+          showToast(
+            limit === 0
+              ? t('screens.transfer.uploadLimitRemoved')
+              : t('screens.transfer.uploadLimitSet', { value: Math.round(limit) }),
+            'success',
+          );
         }
       }
       setLimitInput('');
@@ -369,14 +400,6 @@ export default function TransferScreen() {
   };
 
   const diskSpaceInfo = serverState ? { free: serverState.free_space_on_disk || 0 } : null;
-
-  // Current limit values as KB strings for the picker's selectedValue
-  const currentDlLimitKb = transferInfo
-    ? String(transferInfo.dl_rate_limit > 0 ? bytesToKb(transferInfo.dl_rate_limit) : 0)
-    : '0';
-  const currentUlLimitKb = transferInfo
-    ? String(transferInfo.up_rate_limit > 0 ? bytesToKb(transferInfo.up_rate_limit) : 0)
-    : '0';
 
   // --- Early returns for disconnected / loading / error states ---
 
@@ -541,22 +564,111 @@ export default function TransferScreen() {
           </View>
         </Modal>
 
-        {/* Speed limit option pickers */}
-        <OptionPicker
-          visible={dlPickerVisible}
-          title={t('screens.transfer.downloadLimit')}
-          options={speedOptions}
-          selectedValue={currentDlLimitKb}
-          onSelect={(v) => handleSpeedPickerSelect('download', v)}
-          onClose={() => setDlPickerVisible(false)}
+        <InputModal
+          visible={maxRatioModalVisible}
+          title={t('screens.transfer.maxRatio')}
+          defaultValue={maxRatio.toFixed(2)}
+          keyboardType="numeric"
+          validate={(value) =>
+            parseSpeedLimitInput(value) === null ? t('errors.validNumber') : null
+          }
+          presets={[
+            {
+              label: t('common.unlimited'),
+              value: '',
+              // "Unlimited" for a global limit means turning the limit off
+              // entirely — there's no sentinel number for it like per-torrent
+              // limits have.
+              action: () => {
+                setMaxRatioModalVisible(false);
+                const prev = ratioLimitEnabled;
+                setSeedingLimitPreference(
+                  'max_ratio_enabled',
+                  false,
+                  () => setRatioLimitEnabled(false),
+                  () => setRatioLimitEnabled(prev),
+                );
+              },
+            },
+          ]}
+          onCancel={() => setMaxRatioModalVisible(false)}
+          onConfirm={(value) => {
+            const parsed = parseSpeedLimitInput(value);
+            if (parsed === null) {
+              showToast(t('errors.validNumber'), 'error');
+              return;
+            }
+            setMaxRatioModalVisible(false);
+            const prev = maxRatio;
+            setSeedingLimitPreference(
+              'max_ratio',
+              parsed,
+              () => setMaxRatio(parsed),
+              () => setMaxRatio(prev),
+            );
+          }}
         />
+
+        <InputModal
+          visible={maxSeedingTimeModalVisible}
+          title={t('screens.transfer.maxSeedingTime')}
+          defaultValue={String(maxSeedingTime)}
+          keyboardType="numeric"
+          validate={(value) =>
+            parseSpeedLimitInput(value) === null ? t('errors.validNumber') : null
+          }
+          presets={[
+            {
+              label: t('common.unlimited'),
+              value: '',
+              action: () => {
+                setMaxSeedingTimeModalVisible(false);
+                const prev = seedingTimeLimitEnabled;
+                setSeedingLimitPreference(
+                  'max_seeding_time_enabled',
+                  false,
+                  () => setSeedingTimeLimitEnabled(false),
+                  () => setSeedingTimeLimitEnabled(prev),
+                );
+              },
+            },
+          ]}
+          onCancel={() => setMaxSeedingTimeModalVisible(false)}
+          onConfirm={(value) => {
+            const parsed = parseSpeedLimitInput(value);
+            if (parsed === null) {
+              showToast(t('errors.validNumber'), 'error');
+              return;
+            }
+            const rounded = Math.round(parsed);
+            setMaxSeedingTimeModalVisible(false);
+            const prev = maxSeedingTime;
+            setSeedingLimitPreference(
+              'max_seeding_time',
+              rounded,
+              () => setMaxSeedingTime(rounded),
+              () => setMaxSeedingTime(prev),
+            );
+          }}
+        />
+
         <OptionPicker
-          visible={ulPickerVisible}
-          title={t('screens.transfer.uploadLimit')}
-          options={speedOptions}
-          selectedValue={currentUlLimitKb}
-          onSelect={(v) => handleSpeedPickerSelect('upload', v)}
-          onClose={() => setUlPickerVisible(false)}
+          visible={maxRatioActPickerVisible}
+          title={t('screens.transfer.whenLimitReached')}
+          options={maxRatioActOptions}
+          selectedValue={String(maxRatioAct)}
+          onSelect={(value) => {
+            const act = Number(value);
+            const prev = maxRatioAct;
+            setMaxRatioActPickerVisible(false);
+            setSeedingLimitPreference(
+              'max_ratio_act',
+              act,
+              () => setMaxRatioAct(act),
+              () => setMaxRatioAct(prev),
+            );
+          }}
+          onClose={() => setMaxRatioActPickerVisible(false)}
         />
 
         <ScrollView
@@ -575,36 +687,51 @@ export default function TransferScreen() {
             <View style={styles.heroSpeedRow}>
               <View style={styles.heroSpeedItem}>
                 <Ionicons name="arrow-down" size={20} color={colors.primary} />
-                <Text style={[styles.heroSpeedValue, { color: colors.text }]}>
+                <Text
+                  style={[styles.heroSpeedValue, { color: colors.text }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.6}
+                >
                   {formatSpeed(transferInfo.dl_info_speed)}
                 </Text>
               </View>
               <View style={styles.heroSpeedItem}>
                 <Ionicons name="arrow-up" size={20} color={colors.success} />
-                <Text style={[styles.heroSpeedValue, { color: colors.text }]}>
+                <Text
+                  style={[styles.heroSpeedValue, { color: colors.text }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.6}
+                >
                   {formatSpeed(transferInfo.up_info_speed)}
                 </Text>
               </View>
             </View>
-            <View style={styles.heroGraphContainer}>
-              <View style={styles.heroGraphOverlay}>
-                <SpeedGraph
-                  data={downloadGraphData}
-                  color={colors.primary}
-                  width={GRAPH_WIDTH}
-                  height={80}
-                  maxValue={transferInfo.dl_rate_limit > 0 ? transferInfo.dl_rate_limit : undefined}
-                />
+            <View style={[styles.heroGraphCard, { backgroundColor: colors.surface }]}>
+              <View style={styles.heroGraphContainer}>
+                <View style={styles.heroGraphOverlay}>
+                  <SpeedGraph
+                    data={downloadGraphData}
+                    color={colors.primary}
+                    width={INNER_GRAPH_WIDTH}
+                    height={80}
+                    maxValue={graphMax}
+                  />
+                </View>
+                <View style={styles.heroGraphOverlay}>
+                  <SpeedGraph
+                    data={uploadGraphData}
+                    color={colors.success}
+                    width={INNER_GRAPH_WIDTH}
+                    height={80}
+                    maxValue={graphMax}
+                  />
+                </View>
               </View>
-              <View style={styles.heroGraphOverlay}>
-                <SpeedGraph
-                  data={uploadGraphData}
-                  color={colors.success}
-                  width={GRAPH_WIDTH}
-                  height={80}
-                  maxValue={transferInfo.up_rate_limit > 0 ? transferInfo.up_rate_limit : undefined}
-                />
-              </View>
+              <Text style={[styles.graphScaleCaption, { color: colors.textSecondary }]}>
+                {t('screens.transfer.graphScale', { value: formatSpeed(graphMax) })}
+              </Text>
             </View>
           </View>
 
@@ -616,7 +743,7 @@ export default function TransferScreen() {
             <View style={[styles.card, { backgroundColor: colors.surface }]}>
               <TouchableOpacity
                 style={styles.row}
-                onPress={() => setDlPickerVisible(true)}
+                onPress={() => openLimitModal('download')}
                 disabled={settingLimit || isAltSpeedEnabled}
               >
                 <Text style={[styles.rowLabel, { color: colors.text }]}>
@@ -630,8 +757,8 @@ export default function TransferScreen() {
                     {getDisplayLimit(transferInfo.dl_rate_limit, transferInfo.alt_dl_limit)}
                   </Text>
                   <Ionicons
-                    name="chevron-forward"
-                    size={16}
+                    name="pencil"
+                    size={14}
                     color={isAltSpeedEnabled ? colors.surfaceOutline : colors.textSecondary}
                   />
                 </View>
@@ -641,7 +768,7 @@ export default function TransferScreen() {
 
               <TouchableOpacity
                 style={styles.row}
-                onPress={() => setUlPickerVisible(true)}
+                onPress={() => openLimitModal('upload')}
                 disabled={settingLimit || isAltSpeedEnabled}
               >
                 <Text style={[styles.rowLabel, { color: colors.text }]}>
@@ -655,8 +782,8 @@ export default function TransferScreen() {
                     {getDisplayLimit(transferInfo.up_rate_limit, transferInfo.alt_up_limit)}
                   </Text>
                   <Ionicons
-                    name="chevron-forward"
-                    size={16}
+                    name="pencil"
+                    size={14}
                     color={isAltSpeedEnabled ? colors.surfaceOutline : colors.textSecondary}
                   />
                 </View>
@@ -719,6 +846,117 @@ export default function TransferScreen() {
               </View>
             </View>
           </View>
+
+          {/* ========== SEEDING LIMITS ========== */}
+          {isConnected && (
+            <View style={styles.section}>
+              <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>
+                {t('screens.transfer.seedingLimits')}
+              </Text>
+              <View style={[styles.card, { backgroundColor: colors.surface }]}>
+                <View style={styles.row}>
+                  <Text style={[styles.rowLabel, { color: colors.text }]}>
+                    {t('screens.transfer.ratioLimitEnabled')}
+                  </Text>
+                  <Switch
+                    value={ratioLimitEnabled}
+                    onValueChange={(value) => {
+                      const prev = ratioLimitEnabled;
+                      setSeedingLimitPreference(
+                        'max_ratio_enabled',
+                        value,
+                        () => setRatioLimitEnabled(value),
+                        () => setRatioLimitEnabled(prev),
+                      );
+                    }}
+                    trackColor={{ false: colors.surfaceOutline, true: colors.primary }}
+                  />
+                </View>
+
+                {ratioLimitEnabled && (
+                  <>
+                    <View style={[styles.separator, { backgroundColor: colors.surfaceOutline }]} />
+                    <TouchableOpacity
+                      style={styles.row}
+                      onPress={() => setMaxRatioModalVisible(true)}
+                    >
+                      <Text style={[styles.rowLabel, { color: colors.text }]}>
+                        {t('screens.transfer.maxRatio')}
+                      </Text>
+                      <View style={styles.rowTrailing}>
+                        <Text style={[styles.rowValue, { color: colors.textSecondary }]}>
+                          {maxRatio.toFixed(2)}
+                        </Text>
+                        <Ionicons name="pencil" size={14} color={colors.textSecondary} />
+                      </View>
+                    </TouchableOpacity>
+                  </>
+                )}
+
+                <View style={[styles.separator, { backgroundColor: colors.surfaceOutline }]} />
+
+                <View style={styles.row}>
+                  <Text style={[styles.rowLabel, { color: colors.text }]}>
+                    {t('screens.transfer.seedingTimeLimitEnabled')}
+                  </Text>
+                  <Switch
+                    value={seedingTimeLimitEnabled}
+                    onValueChange={(value) => {
+                      const prev = seedingTimeLimitEnabled;
+                      setSeedingLimitPreference(
+                        'max_seeding_time_enabled',
+                        value,
+                        () => setSeedingTimeLimitEnabled(value),
+                        () => setSeedingTimeLimitEnabled(prev),
+                      );
+                    }}
+                    trackColor={{ false: colors.surfaceOutline, true: colors.primary }}
+                  />
+                </View>
+
+                {seedingTimeLimitEnabled && (
+                  <>
+                    <View style={[styles.separator, { backgroundColor: colors.surfaceOutline }]} />
+                    <TouchableOpacity
+                      style={styles.row}
+                      onPress={() => setMaxSeedingTimeModalVisible(true)}
+                    >
+                      <Text style={[styles.rowLabel, { color: colors.text }]}>
+                        {t('screens.transfer.maxSeedingTime')}
+                      </Text>
+                      <View style={styles.rowTrailing}>
+                        <Text style={[styles.rowValue, { color: colors.textSecondary }]}>
+                          {formatTime(maxSeedingTime * 60)}
+                        </Text>
+                        <Ionicons name="pencil" size={14} color={colors.textSecondary} />
+                      </View>
+                    </TouchableOpacity>
+                  </>
+                )}
+
+                {(ratioLimitEnabled || seedingTimeLimitEnabled) && (
+                  <>
+                    <View style={[styles.separator, { backgroundColor: colors.surfaceOutline }]} />
+                    <TouchableOpacity
+                      style={styles.row}
+                      onPress={() => setMaxRatioActPickerVisible(true)}
+                    >
+                      <Text style={[styles.rowLabel, { color: colors.text }]}>
+                        {t('screens.transfer.whenLimitReached')}
+                      </Text>
+                      <View style={styles.rowTrailing}>
+                        <Text style={[styles.rowValue, { color: colors.textSecondary }]}>
+                          {maxRatioActOptions.find((opt) => opt.value === String(maxRatioAct))
+                            ?.label ?? maxRatioActOptions[0].label}
+                        </Text>
+                        <Ionicons name="pencil" size={14} color={colors.textSecondary} />
+                      </View>
+                    </TouchableOpacity>
+                  </>
+                )}
+              </View>
+            </View>
+          )}
 
           {/* ========== ACTIONS ========== */}
           <View style={styles.section}>
@@ -972,19 +1210,32 @@ const styles = StyleSheet.create({
   heroSpeedRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: spacing.xxxl,
+    width: '100%',
     marginBottom: spacing.lg,
   },
   heroSpeedItem: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: spacing.sm,
+    minWidth: 0,
+    paddingHorizontal: spacing.sm,
   },
   heroSpeedValue: {
     ...typography.largeTitle,
+    flexShrink: 1,
+  },
+  heroGraphCard: {
+    width: GRAPH_WIDTH,
+    marginTop: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
+    paddingHorizontal: GRAPH_CARD_PADDING,
+    borderRadius: 12,
   },
   heroGraphContainer: {
-    width: GRAPH_WIDTH,
+    width: INNER_GRAPH_WIDTH,
     height: 80,
     position: 'relative',
   },
@@ -992,6 +1243,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
+  },
+  graphScaleCaption: {
+    fontSize: 11,
+    fontWeight: '500',
+    textAlign: 'right',
+    marginTop: spacing.xs,
   },
 
   // Sections

@@ -48,6 +48,7 @@ import { storageService } from '@/services/storage';
 import { ExpandedCardField, DEFAULT_PREFERENCES } from '@/types/preferences';
 import { ServerManager } from '@/services/server-manager';
 import { getPauseOnAddPreferenceKey } from '@/utils/apiVersion';
+import { formatSpeed, kbToBytes } from '@/utils/format';
 import { haptics } from '@/utils/haptics';
 import { shadows } from '@/constants/shadows';
 import { spacing, borderRadius } from '@/constants/spacing';
@@ -1968,6 +1969,10 @@ export default function TorrentsScreen() {
           defaultValue={dlLimitDefaultValue}
           keyboardType="numeric"
           allowEmpty
+          computeHint={(value) => {
+            const kb = parseFloat(value);
+            return kb > 0 ? formatSpeed(kbToBytes(kb)) : null;
+          }}
           onCancel={() => setDlLimitModalVisible(false)}
           onConfirm={(value) => {
             setDlLimitModalVisible(false);
@@ -1983,6 +1988,10 @@ export default function TorrentsScreen() {
           defaultValue={ulLimitDefaultValue}
           keyboardType="numeric"
           allowEmpty
+          computeHint={(value) => {
+            const kb = parseFloat(value);
+            return kb > 0 ? formatSpeed(kbToBytes(kb)) : null;
+          }}
           onCancel={() => setUlLimitModalVisible(false)}
           onConfirm={(value) => {
             setUlLimitModalVisible(false);
@@ -2272,11 +2281,12 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingTop: 100,
+    paddingHorizontal: 2,
     borderRadius: borderRadius.large,
   },
   skeletonList: {
     paddingTop: 100,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: 2,
   },
   selectionHeader: {
     flexDirection: 'row',

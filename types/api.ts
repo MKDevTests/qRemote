@@ -111,6 +111,16 @@ export interface ApplicationPreferences {
   autorun_on_torrent_added_program?: string;
   autorun_enabled?: boolean;
   autorun_program?: string;
+  /** True if the global share ratio limit is enabled. */
+  max_ratio_enabled?: boolean;
+  /** Global share ratio limit. */
+  max_ratio?: number;
+  /** Action when a torrent hits a share limit: 0 = pause, 1 = remove. */
+  max_ratio_act?: number;
+  /** True if the global seeding time limit is enabled. */
+  max_seeding_time_enabled?: boolean;
+  /** Global seeding time limit, in minutes. */
+  max_seeding_time?: number;
   [key: string]: unknown;
 }
 
