@@ -837,12 +837,14 @@ export default function TransferScreen() {
                 <Text style={[styles.rowLabel, { color: colors.text }]}>
                   {t('screens.transfer.alternativeSpeeds')}
                 </Text>
-                <Switch
-                  value={isAltSpeedEnabled}
-                  onValueChange={handleToggleAltSpeed}
-                  disabled={actionLoading === 'altSpeed'}
-                  trackColor={{ false: colors.surfaceOutline, true: colors.primary }}
-                />
+                <View style={styles.switchHost}>
+                  <Switch
+                    value={isAltSpeedEnabled}
+                    onValueChange={handleToggleAltSpeed}
+                    disabled={actionLoading === 'altSpeed'}
+                    trackColor={{ false: colors.surfaceOutline, true: colors.primary }}
+                  />
+                </View>
               </View>
             </View>
           </View>
@@ -858,19 +860,21 @@ export default function TransferScreen() {
                   <Text style={[styles.rowLabel, { color: colors.text }]}>
                     {t('screens.transfer.ratioLimitEnabled')}
                   </Text>
-                  <Switch
-                    value={ratioLimitEnabled}
-                    onValueChange={(value) => {
-                      const prev = ratioLimitEnabled;
-                      setSeedingLimitPreference(
-                        'max_ratio_enabled',
-                        value,
-                        () => setRatioLimitEnabled(value),
-                        () => setRatioLimitEnabled(prev),
-                      );
-                    }}
-                    trackColor={{ false: colors.surfaceOutline, true: colors.primary }}
-                  />
+                  <View style={styles.switchHost}>
+                    <Switch
+                      value={ratioLimitEnabled}
+                      onValueChange={(value) => {
+                        const prev = ratioLimitEnabled;
+                        setSeedingLimitPreference(
+                          'max_ratio_enabled',
+                          value,
+                          () => setRatioLimitEnabled(value),
+                          () => setRatioLimitEnabled(prev),
+                        );
+                      }}
+                      trackColor={{ false: colors.surfaceOutline, true: colors.primary }}
+                    />
+                  </View>
                 </View>
 
                 {ratioLimitEnabled && (
@@ -899,19 +903,21 @@ export default function TransferScreen() {
                   <Text style={[styles.rowLabel, { color: colors.text }]}>
                     {t('screens.transfer.seedingTimeLimitEnabled')}
                   </Text>
-                  <Switch
-                    value={seedingTimeLimitEnabled}
-                    onValueChange={(value) => {
-                      const prev = seedingTimeLimitEnabled;
-                      setSeedingLimitPreference(
-                        'max_seeding_time_enabled',
-                        value,
-                        () => setSeedingTimeLimitEnabled(value),
-                        () => setSeedingTimeLimitEnabled(prev),
-                      );
-                    }}
-                    trackColor={{ false: colors.surfaceOutline, true: colors.primary }}
-                  />
+                  <View style={styles.switchHost}>
+                    <Switch
+                      value={seedingTimeLimitEnabled}
+                      onValueChange={(value) => {
+                        const prev = seedingTimeLimitEnabled;
+                        setSeedingLimitPreference(
+                          'max_seeding_time_enabled',
+                          value,
+                          () => setSeedingTimeLimitEnabled(value),
+                          () => setSeedingTimeLimitEnabled(prev),
+                        );
+                      }}
+                      trackColor={{ false: colors.surfaceOutline, true: colors.primary }}
+                    />
+                  </View>
                 </View>
 
                 {seedingTimeLimitEnabled && (
@@ -1273,6 +1279,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     minHeight: 44,
+    // Match torrent-detail / Settings switch rows so UISwitch sits optically
+    // centered with the label (minHeight alone leaves the control top-heavy).
+    paddingVertical: 10,
   },
   rowLeading: {
     flexDirection: 'row',
@@ -1285,8 +1294,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xs,
   },
+  // UISwitch's layout frame is taller than the visible control and top-weighted;
+  // clip to the visual height so alignItems: 'center' on the row actually centers it.
+  switchHost: {
+    height: 31,
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
   rowLabel: {
     ...typography.body,
+    flex: 1,
+    marginRight: spacing.md,
   },
   rowSub: {
     ...typography.caption,

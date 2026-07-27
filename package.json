@@ -1,6 +1,7 @@
 {
   "name": "qRemote",
   "version": "3.8.34",
+  "easBuild": true,
   "main": "index.ts",
   "scripts": {
     "start": "expo start --dev-client",
@@ -9,7 +10,8 @@
     "web": "expo start --web",
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write '**/*.{ts,tsx,js,json}'",
-    "test": "jest"
+    "test": "jest",
+    "test:watch": "jest --watch"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.1.1",

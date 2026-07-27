@@ -9,34 +9,42 @@ on:
 
 jobs:
   check-version:
-    name: Check version bump
+    name: Check release gate
     runs-on: ubuntu-latest
     outputs:
       version_changed: ${{ steps.check.outputs.version_changed }}
       version: ${{ steps.check.outputs.version }}
+      eas_build: ${{ steps.check.outputs.eas_build }}
+      should_release: ${{ steps.check.outputs.should_release }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
 
-      - name: Check if version changed
+      - name: Check easBuild flag (manual release)
         id: check
         run: |
           CURRENT=$(node -p "require('./package.json').version")
           PREVIOUS=$(git show HEAD~1:package.json 2>/dev/null | node -p "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).version" 2>/dev/null || echo "0.0.0")
+          # Manual release: flip "easBuild": true in package.json (version bump optional).
+          EAS_BUILD=$(node -p "require('./package.json').easBuild === true ? 'true' : 'false'")
+          if [ "$CURRENT" != "$PREVIOUS" ]; then
+            VERSION_CHANGED=true
+          else
+            VERSION_CHANGED=false
+          fi
           echo "Current version:  $CURRENT"
           echo "Previous version: $PREVIOUS"
-          if [ "$CURRENT" != "$PREVIOUS" ]; then
-            echo "version_changed=true" >> $GITHUB_OUTPUT
-            echo "version=$CURRENT" >> $GITHUB_OUTPUT
-          else
-            echo "version_changed=false" >> $GITHUB_OUTPUT
-          fi
+          echo "easBuild flag:    $EAS_BUILD"
+          echo "version_changed=$VERSION_CHANGED" >> $GITHUB_OUTPUT
+          echo "version=$CURRENT" >> $GITHUB_OUTPUT
+          echo "eas_build=$EAS_BUILD" >> $GITHUB_OUTPUT
+          echo "should_release=$EAS_BUILD" >> $GITHUB_OUTPUT
 
   create-release:
     name: Create GitHub Release (v${{ needs.check-version.outputs.version }})
     needs: check-version
-    if: needs.check-version.outputs.version_changed == 'true'
+    if: needs.check-version.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -51,25 +59,126 @@ jobs:
           const version = process.argv[2];
           const content = readFileSync('constants/changelog.ts', 'utf8');
 
-          const pattern = new RegExp(
-            `version:\\s*'${version.replace(/\./g, '\\.')}',\\s*date:\\s*'([^']+)',\\s*changes:\\s*\\[([\\s\\S]*?)\\]`
-          );
+          function decodeString(raw) {
+            return raw
+              .replace(/\\'/g, "'")
+              .replace(/\\"/g, '"')
+              .replace(/\\n/g, '\n')
+              .replace(/\\\\/g, '\\');
+          }
 
-          const match = content.match(pattern);
-          if (!match) {
+          function extractQuotedStrings(src) {
+            const out = [];
+            const re = /'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"/g;
+            let m;
+            while ((m = re.exec(src))) {
+              out.push(decodeString(m[0].slice(1, -1)));
+            }
+            return out;
+          }
+
+          /** Slice the `{ version: '…', … }` object for this version, respecting strings. */
+          function extractReleaseBlock(src, ver) {
+            const header = new RegExp(
+              `\\{\\s*version:\\s*'${ver.replace(/\\./g, '\\.')}',\\s*date:\\s*'([^']+)'`,
+            );
+            const match = header.exec(src);
+            if (!match) return null;
+
+            const startIdx = match.index;
+            const date = match[1];
+            let depth = 0;
+            let endIdx = -1;
+            for (let i = startIdx; i < src.length; i++) {
+              const c = src[i];
+              if (c === "'" || c === '"') {
+                const q = c;
+                i++;
+                while (i < src.length) {
+                  if (src[i] === '\\') {
+                    i += 2;
+                    continue;
+                  }
+                  if (src[i] === q) break;
+                  i++;
+                }
+                continue;
+              }
+              if (c === '{') depth++;
+              else if (c === '}') {
+                depth--;
+                if (depth === 0) {
+                  endIdx = i;
+                  break;
+                }
+              }
+            }
+            if (endIdx < 0) return null;
+            return { date, block: src.slice(startIdx, endIdx + 1) };
+          }
+
+          function parseSections(block) {
+            if (!/\bsections:\s*\[/.test(block)) return null;
+            const sectionRe =
+              /\{\s*title:\s*('(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*")\s*,\s*items:\s*\[([\s\S]*?)\]\s*,?\s*\}/g;
+            const sections = [];
+            let m;
+            while ((m = sectionRe.exec(block))) {
+              const title = decodeString(m[1].slice(1, -1));
+              const items = extractQuotedStrings(m[2]);
+              if (items.length) sections.push({ title, items });
+            }
+            return sections.length ? sections : null;
+          }
+
+          function parseLegacyChanges(block) {
+            const changesIdx = block.search(/\bchanges:\s*\[/);
+            if (changesIdx < 0) return null;
+            const open = block.indexOf('[', changesIdx);
+            let depth = 0;
+            let end = -1;
+            for (let i = open; i < block.length; i++) {
+              const c = block[i];
+              if (c === "'" || c === '"') {
+                const q = c;
+                i++;
+                while (i < block.length) {
+                  if (block[i] === '\\') {
+                    i += 2;
+                    continue;
+                  }
+                  if (block[i] === q) break;
+                  i++;
+                }
+                continue;
+              }
+              if (c === '[') depth++;
+              else if (c === ']') {
+                depth--;
+                if (depth === 0) {
+                  end = i;
+                  break;
+                }
+              }
+            }
+            if (end < 0) return null;
+            const items = extractQuotedStrings(block.slice(open + 1, end));
+            return items.length ? items : null;
+          }
+
+          const SECTION_HEADINGS = {
+            'New Features': "### ✨ What's New",
+            'Bugs Fixed': '### 🐛 Bug Fixes',
+            Maintenance: '### 🔧 Maintenance',
+          };
+
+          const release = extractReleaseBlock(content, version);
+          if (!release) {
             process.stdout.write(`## qRemote v${version}\n\nNo changelog entry found for this version.\n`);
             process.exit(0);
           }
 
-          const date = match[1];
-          // Match both 'single' and "double" quoted strings (TS allows either)
-          const changes = [...match[2].matchAll(/(?:'([^']*)'|"([^"]*)")/g)]
-            .map(m => m[1] ?? m[2])
-            .filter(Boolean);
-
-          const fixes = changes.filter(c => /^fix(ed)?|^bug/i.test(c));
-          const features = changes.filter(c => !/^fix(ed)?|^bug/i.test(c));
-
+          const { date, block } = release;
           const dateStr = new Date(date + 'T12:00:00').toLocaleDateString('en-US', {
             year: 'numeric', month: 'long', day: 'numeric',
           });
@@ -80,15 +189,28 @@ jobs:
             '',
           ];
 
-          if (features.length) {
-            lines.push("### ✨ What's New");
-            features.forEach(c => lines.push(`- ${c}`));
-            lines.push('');
-          }
-          if (fixes.length) {
-            lines.push('### 🐛 Bug Fixes');
-            fixes.forEach(c => lines.push(`- ${c}`));
-            lines.push('');
+          // Prefer sectioned entries (v3.8.23+); fall back to flat changes[].
+          const sections = parseSections(block);
+          if (sections) {
+            for (const section of sections) {
+              lines.push(SECTION_HEADINGS[section.title] ?? `### ${section.title}`);
+              for (const item of section.items) lines.push(`- ${item}`);
+              lines.push('');
+            }
+          } else {
+            const changes = parseLegacyChanges(block) ?? [];
+            const fixes = changes.filter(c => /^(fix(ed)?|bug)/i.test(c));
+            const features = changes.filter(c => !/^(fix(ed)?|bug)/i.test(c));
+            if (features.length) {
+              lines.push("### ✨ What's New");
+              features.forEach(c => lines.push(`- ${c}`));
+              lines.push('');
+            }
+            if (fixes.length) {
+              lines.push('### 🐛 Bug Fixes');
+              fixes.forEach(c => lines.push(`- ${c}`));
+              lines.push('');
+            }
           }
 
           process.stdout.write(lines.join('\n'));
@@ -105,11 +227,13 @@ jobs:
           name: qRemote v${{ needs.check-version.outputs.version }}
           body_path: /tmp/release-notes.md
           make_latest: "true"
+          # Same-version re-release (easBuild without a bump) updates the existing tag/notes.
+          target_commitish: ${{ github.sha }}
 
   build:
     name: Build iOS (${{ needs.check-version.outputs.version }})
     needs: check-version
-    if: needs.check-version.outputs.version_changed == 'true'
+    if: needs.check-version.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     outputs:
@@ -147,7 +271,7 @@ jobs:
   submit:
     name: Submit to App Store (${{ needs.check-version.outputs.version }})
     needs: [check-version, build]
-    if: needs.check-version.outputs.version_changed == 'true'
+    if: needs.check-version.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
