@@ -1,6 +1,6 @@
 {
   "name": "qRemote",
-  "version": "3.8.31",
+  "version": "3.8.32",
   "main": "index.ts",
   "scripts": {
     "start": "expo start --dev-client",

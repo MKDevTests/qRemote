@@ -150,7 +150,7 @@ export default function TorrentDetail() {
     message?: string;
     placeholder?: string;
     defaultValue?: string;
-    keyboardType?: 'default' | 'numeric';
+    keyboardType?: 'default' | 'numeric' | 'numbers-and-punctuation';
     allowEmpty?: boolean;
     onConfirm: (value: string) => void;
   }>({ title: '', onConfirm: () => {} });
@@ -457,7 +457,7 @@ export default function TorrentDetail() {
       title: t('torrentDetail.setRatioLimit'),
       message: t('torrentDetail.enterRatioLimit'),
       defaultValue: current,
-      keyboardType: 'numeric',
+      keyboardType: 'numbers-and-punctuation',
       allowEmpty: true,
       onConfirm: async (value: string) => {
         setInputModalVisible(false);
@@ -499,7 +499,7 @@ export default function TorrentDetail() {
       title: t('torrentDetail.setSeedingTimeLimit'),
       message: t('torrentDetail.enterSeedingTimeMinutes'),
       defaultValue: current,
-      keyboardType: 'numeric',
+      keyboardType: 'numbers-and-punctuation',
       allowEmpty: true,
       onConfirm: async (value: string) => {
         setInputModalVisible(false);

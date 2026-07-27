@@ -14,7 +14,7 @@ interface InputModalProps {
   defaultValue?: string;
   onCancel: () => void;
   onConfirm: (value: string) => void;
-  keyboardType?: 'default' | 'numeric' | 'email-address' | 'phone-pad';
+  keyboardType?: 'default' | 'numeric' | 'email-address' | 'phone-pad' | 'numbers-and-punctuation';
   multiline?: boolean;
   allowEmpty?: boolean;
   /** Suggests directory names as the user types (qBittorrent 5.0+ only; see PathAutocompleteInput). */

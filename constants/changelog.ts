@@ -20,6 +20,18 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '3.8.32',
+    date: '2026-07-27',
+    sections: [
+      {
+        title: 'Bugs Fixed',
+        items: [
+          'Fixed being unable to type "-1" (or "-2") for a torrent\'s ratio or seeding time share limit — the numeric keyboard had no minus-sign key',
+        ],
+      },
+    ],
+  },
+  {
     version: '3.8.31',
     date: '2026-07-26',
     sections: [
