@@ -28,6 +28,10 @@ export const CHANGELOG: ChangelogRelease[] = [
         items: [
           'Fixed being unable to type "-1" (or "-2") for a torrent\'s ratio or seeding time share limit — the numeric keyboard had no minus-sign key',
           'Fixed setting a torrent\'s ratio or seeding time limit failing with "Missing required parameters" on qBittorrent 5.1+',
+          'Fixed changing a ratio or seeding time limit silently resetting the torrent\'s share limit action and inactive seeding limit to the server-wide defaults — on servers whose global action is "Remove torrent", this could delete the torrent',
+          'Ratio, seeding time and speed limit boxes now reject invalid entries instead of quietly applying "unlimited" (or reporting "NaN"), and offer one-tap Unlimited / Use global shortcuts',
+          'The Ratio Limit and Seeding Time Limit rows now read "Global (…)" when the torrent follows the server-wide limit, instead of incorrectly showing "Unlimited"',
+          'The torrent screen now tells you when a torrent no longer exists on the server and returns to the list, instead of showing a confusing "Endpoint not found" error',
         ],
       },
     ],

@@ -11,6 +11,7 @@ jest.mock('@/context/ThemeContext', () => ({
       background: '#eee',
       surfaceOutline: '#ccc',
       primary: '#00f',
+      error: '#f00',
     },
   }),
 }));
@@ -199,5 +200,129 @@ describe('InputModal', () => {
     );
     const textInput = screen.getByPlaceholderText('p');
     expect(textInput.props.keyboardType).toBe('numeric');
+  });
+
+  describe('validation', () => {
+    const invalidUnlessNumber = (v: string) => (/^\d*$/.test(v) ? null : 'not a number');
+
+    it('does not show an error before the user has typed anything', async () => {
+      await render(
+        <InputModal
+          visible
+          title="Limit"
+          placeholder="p"
+          defaultValue="oops"
+          onCancel={jest.fn()}
+          onConfirm={jest.fn()}
+          allowEmpty
+          validate={invalidUnlessNumber}
+        />,
+      );
+      expect(screen.queryByText('not a number')).toBeNull();
+    });
+
+    it('shows the error once the value has been edited', async () => {
+      await render(
+        <InputModal
+          visible
+          title="Limit"
+          placeholder="p"
+          onCancel={jest.fn()}
+          onConfirm={jest.fn()}
+          allowEmpty
+          validate={invalidUnlessNumber}
+        />,
+      );
+      await fireEvent.changeText(screen.getByPlaceholderText('p'), 'abc');
+      expect(screen.getByText('not a number')).toBeTruthy();
+    });
+
+    it('blocks confirm while the value is invalid', async () => {
+      const onConfirm = jest.fn();
+      await render(
+        <InputModal
+          visible
+          title="Limit"
+          placeholder="p"
+          onCancel={jest.fn()}
+          onConfirm={onConfirm}
+          allowEmpty
+          validate={invalidUnlessNumber}
+        />,
+      );
+      await fireEvent.changeText(screen.getByPlaceholderText('p'), 'abc');
+      await fireEvent.press(screen.getByText('common.confirm'));
+      expect(onConfirm).not.toHaveBeenCalled();
+    });
+
+    it('confirms once the value becomes valid', async () => {
+      const onConfirm = jest.fn();
+      await render(
+        <InputModal
+          visible
+          title="Limit"
+          placeholder="p"
+          onCancel={jest.fn()}
+          onConfirm={onConfirm}
+          allowEmpty
+          validate={invalidUnlessNumber}
+        />,
+      );
+      await fireEvent.changeText(screen.getByPlaceholderText('p'), 'abc');
+      await fireEvent.changeText(screen.getByPlaceholderText('p'), '42');
+      expect(screen.queryByText('not a number')).toBeNull();
+      await fireEvent.press(screen.getByText('common.confirm'));
+      expect(onConfirm).toHaveBeenCalledWith('42');
+    });
+
+    it('renders no error row when no validate prop is given', async () => {
+      await render(
+        <InputModal
+          visible
+          title="Rename"
+          placeholder="p"
+          onCancel={jest.fn()}
+          onConfirm={jest.fn()}
+        />,
+      );
+      await fireEvent.changeText(screen.getByPlaceholderText('p'), 'anything');
+      expect(screen.queryByText('not a number')).toBeNull();
+    });
+  });
+
+  describe('presets', () => {
+    it('fills the input when a preset chip is tapped, without confirming', async () => {
+      const onConfirm = jest.fn();
+      await render(
+        <InputModal
+          visible
+          title="Limit"
+          placeholder="p"
+          onCancel={jest.fn()}
+          onConfirm={onConfirm}
+          allowEmpty
+          presets={[
+            { label: 'Unlimited', value: '-1' },
+            { label: 'Use global', value: '-2' },
+          ]}
+        />,
+      );
+      await fireEvent.press(screen.getByText('Use global'));
+      expect(screen.getByPlaceholderText('p').props.value).toBe('-2');
+      expect(onConfirm).not.toHaveBeenCalled();
+    });
+
+    it('renders no chips when presets are omitted', async () => {
+      await render(
+        <InputModal
+          visible
+          title="Rename"
+          placeholder="p"
+          onCancel={jest.fn()}
+          onConfirm={jest.fn()}
+        />,
+      );
+      expect(screen.queryByText('Unlimited')).toBeNull();
+    });
   });
 });

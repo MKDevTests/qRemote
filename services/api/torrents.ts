@@ -470,31 +470,43 @@ export const torrentsApi = {
   },
 
   /**
-   * Set torrent share limit
+   * Set torrent share limits.
+   *
+   * Newer qBittorrent (5.x / WebAPI ≥ 2.11.0) REQUIRES inactiveSeedingTimeLimit,
+   * shareLimitAction and shareLimitsMode — omitting them fails the request with
+   * "Missing required parameters". They are not "leave unchanged" parameters
+   * though: the server applies whatever it receives, and the sentinel values
+   * ('Default', -2) mean "fall back to the global setting". Sending those blindly
+   * wipes the torrent's own share-limit action, and if the global action is
+   * "Remove" the server can delete a torrent the user only meant to re-limit.
+   *
+   * So callers must pass the torrent's CURRENT values (straight off `torrents/info`)
+   * for everything they are not deliberately changing; the sentinels below are a
+   * last resort for servers that don't report the field at all.
    */
   async setTorrentShareLimits(
     hashes: string[],
-    ratioLimit?: number,
-    seedingTimeLimit?: number,
-    inactiveSeedingTimeLimit?: number,
+    limits: {
+      ratioLimit?: number;
+      seedingTimeLimit?: number;
+      inactiveSeedingTimeLimit?: number;
+      shareLimitAction?: string;
+      shareLimitsMode?: string;
+    } = {},
   ): Promise<void> {
     const params: Record<string, string | number | boolean> = {
       hashes: hashes.join('|'),
     };
-    if (ratioLimit !== undefined) {
-      params.ratioLimit = ratioLimit;
+    if (limits.ratioLimit !== undefined) {
+      params.ratioLimit = limits.ratioLimit;
     }
-    if (seedingTimeLimit !== undefined) {
-      params.seedingTimeLimit = seedingTimeLimit;
+    if (limits.seedingTimeLimit !== undefined) {
+      params.seedingTimeLimit = limits.seedingTimeLimit;
     }
-    // qBittorrent 5.1+ (WebAPI 2.11.0+) requires these three params too, or
-    // setShareLimits fails with "Missing required parameters". There's no UI
-    // for shareLimitAction/shareLimitsMode yet, so send "Default" (keeps the
-    // server's existing per-torrent/global behavior unchanged).
     if (apiClient.getApiFeatures().supportsInactiveSeedingLimit) {
-      params.inactiveSeedingTimeLimit = inactiveSeedingTimeLimit ?? -2;
-      params.shareLimitAction = 'Default';
-      params.shareLimitsMode = 'Default';
+      params.inactiveSeedingTimeLimit = limits.inactiveSeedingTimeLimit ?? -2;
+      params.shareLimitAction = limits.shareLimitAction ?? 'Default';
+      params.shareLimitsMode = limits.shareLimitsMode ?? 'Default';
     }
     await apiClient.postUrlEncoded(`/api/${API_VERSION}/torrents/setShareLimits`, params);
   },

@@ -37,7 +37,7 @@ import { FocusAwareStatusBar } from '@/components/FocusAwareStatusBar';
 import { AnimatedProgressBar } from '@/components/AnimatedProgressBar';
 import { SpeedGraph } from '@/components/SpeedGraph';
 import { PieceMap } from '@/components/PieceMap';
-import { InputModal } from '@/components/InputModal';
+import { InputModal, InputModalPreset } from '@/components/InputModal';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { OptionPicker } from '@/components/OptionPicker';
 import { TagsModal } from '@/components/TagsModal';
@@ -49,7 +49,14 @@ import { tagsApi } from '@/services/api/tags';
 import { categoriesApi } from '@/services/api/categories';
 import { TorrentProperties, Tracker, TorrentFile, TorrentInfo } from '@/types/api';
 import { formatDate, formatProgress, formatAvailability } from '@/utils/format';
-import { getErrorMessage } from '@/utils/error';
+import { getErrorMessage, getErrorStatus } from '@/utils/error';
+import {
+  describeShareLimit,
+  parseShareLimitInput,
+  parseSpeedLimitInput,
+  SHARE_LIMIT_GLOBAL,
+  SHARE_LIMIT_UNLIMITED,
+} from '@/utils/limit-input';
 import { haptics } from '@/utils/haptics';
 
 const SPEED_HISTORY_LEN = 30;
@@ -152,6 +159,8 @@ export default function TorrentDetail() {
     defaultValue?: string;
     keyboardType?: 'default' | 'numeric' | 'numbers-and-punctuation';
     allowEmpty?: boolean;
+    validate?: (value: string) => string | null;
+    presets?: InputModalPreset[];
     onConfirm: (value: string) => void;
   }>({ title: '', onConfirm: () => {} });
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
@@ -169,6 +178,7 @@ export default function TorrentDetail() {
   // ── Data loading ──────────────────────────────────────────────────────
 
   useEffect(() => {
+    torrentGoneRef.current = false;
     if (hash && isConnected) {
       loadTorrentData();
     }
@@ -180,6 +190,32 @@ export default function TorrentDetail() {
     setDlHistory((prev) => [...prev.slice(1), dl]);
     setUlHistory((prev) => [...prev.slice(1), ul]);
   };
+
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  /** Latch so the two independent refresh paths can't both pop the screen. */
+  const torrentGoneRef = useRef(false);
+
+  /**
+   * The torrent no longer exists on the server — it was removed elsewhere, or a
+   * share limit with a "Remove torrent" action fired. Stop polling (otherwise we
+   * keep 404-ing every 2s), say so plainly, and leave the dead screen.
+   */
+  const handleTorrentGone = useCallback(() => {
+    if (torrentGoneRef.current) return;
+    torrentGoneRef.current = true;
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    showToast(t('torrentDetail.torrentRemoved'), 'error');
+    // Deep links can land here with nothing to go back to.
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/');
+    }
+  }, [showToast, t, router]);
 
   const loadTorrentData = async () => {
     try {
@@ -202,7 +238,13 @@ export default function TorrentDetail() {
       ]);
 
       const next = torrentList.length > 0 ? torrentList[0] : null;
-      if (next) setTorrent(next);
+      // torrents/info answers 200 with an empty list for a hash that's gone,
+      // so this — not the 404 below — is the usual signal.
+      if (!next) {
+        handleTorrentGone();
+        return null;
+      }
+      setTorrent(next);
       setProperties(props);
       setTrackers(trackersData);
       setFiles(filesData);
@@ -211,6 +253,13 @@ export default function TorrentDetail() {
       setLastUpdatedAt(new Date());
       return next;
     } catch (error: unknown) {
+      // torrents/properties 404s for an unknown hash. The other calls here are
+      // core endpoints present since WebAPI 2.0, so a 404 means the torrent is
+      // gone rather than the endpoint being unsupported.
+      if (getErrorStatus(error) === 404) {
+        handleTorrentGone();
+        return null;
+      }
       showToast(getErrorMessage(error), 'error');
       return null;
     } finally {
@@ -244,26 +293,31 @@ export default function TorrentDetail() {
       ]);
 
       const next = torrentList.length > 0 ? torrentList[0] : null;
-      if (next) setTorrent(next);
+      if (!next) {
+        handleTorrentGone();
+        return;
+      }
+      setTorrent(next);
       setProperties(props);
       setTrackers(trackersData);
       setFiles(filesData);
       setPieceStates(normalizePieceStates(piecesData));
-      if (next) {
-        const dl = (next.dlspeed ?? 0) / 1024 / 1024;
-        const ul = (next.upspeed ?? 0) / 1024 / 1024;
-        setDlHistory((prev) => [...prev.slice(1), dl]);
-        setUlHistory((prev) => [...prev.slice(1), ul]);
-      }
+      const dl = (next.dlspeed ?? 0) / 1024 / 1024;
+      const ul = (next.upspeed ?? 0) / 1024 / 1024;
+      setDlHistory((prev) => [...prev.slice(1), dl]);
+      setUlHistory((prev) => [...prev.slice(1), ul]);
       setLastUpdatedAt(new Date());
-    } catch {
-      // Silent failure — don't interrupt the user
+    } catch (error: unknown) {
+      // Still silent for ordinary failures — but a vanished torrent has to be
+      // acted on, or this poll 404s every 2 seconds forever.
+      if (getErrorStatus(error) === 404) {
+        handleTorrentGone();
+      }
     }
-  }, [hash]);
+  }, [hash, handleTorrentGone]);
 
   // ── Polling ───────────────────────────────────────────────────────────
 
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const appStateRef = useRef(AppState.currentState);
 
   const startPolling = useCallback(() => {
@@ -448,36 +502,62 @@ export default function TorrentDetail() {
     }
   };
 
+  /**
+   * Everything setShareLimits needs in order to leave alone what the user isn't
+   * editing. The sentinels ('Default', -2) mean "use the global setting", NOT
+   * "unchanged", so a limit edit that doesn't echo these back silently resets
+   * them — and a global action of "Remove torrent" then deletes the torrent.
+   */
+  const currentShareLimits = () => ({
+    inactiveSeedingTimeLimit: torrent?.inactive_seeding_time_limit,
+    shareLimitAction: torrent?.share_limit_action,
+    shareLimitsMode: torrent?.share_limits_mode,
+  });
+
+  const shareLimitPresets: InputModalPreset[] = [
+    { label: t('common.unlimited'), value: String(SHARE_LIMIT_UNLIMITED) },
+    { label: t('torrentDetail.useGlobal'), value: String(SHARE_LIMIT_GLOBAL) },
+  ];
+
+  /** Describe a ratio limit the user just set, resolving both sentinels to words. */
+  const formatShareRatio = (ratioLimit: number): string => {
+    if (ratioLimit === SHARE_LIMIT_GLOBAL) return t('torrentDetail.useGlobal');
+    if (ratioLimit < 0) return t('common.unlimited');
+    return ratioLimit.toFixed(2);
+  };
+
   const handleSetRatioLimit = () => {
-    const current =
-      torrent?.ratio_limit != null && torrent.ratio_limit >= 0
-        ? torrent.ratio_limit.toString()
-        : '';
+    const current = torrent?.ratio_limit != null ? torrent.ratio_limit.toString() : '';
     setInputModalConfig({
       title: t('torrentDetail.setRatioLimit'),
       message: t('torrentDetail.enterRatioLimit'),
       defaultValue: current,
       keyboardType: 'numbers-and-punctuation',
       allowEmpty: true,
+      validate: (value: string) =>
+        parseShareLimitInput(value) === null ? t('errors.validNumber') : null,
+      presets: shareLimitPresets,
       onConfirm: async (value: string) => {
+        const ratioLimit = parseShareLimitInput(value);
+        // validate() already blocks this; belt and braces so a bad value can
+        // never reach the server as an accidental "unlimited".
+        if (ratioLimit === null) {
+          showToast(t('errors.validNumber'), 'error');
+          return;
+        }
         setInputModalVisible(false);
         try {
           setActionLoading(true);
-          const ratioLimit = value.trim() === '' ? -1 : parseFloat(value);
-          const seedingTimeLimit =
-            torrent?.seeding_time_limit != null ? torrent.seeding_time_limit : -2;
-          await torrentsApi.setTorrentShareLimits(
-            [torrent!.hash],
-            Number.isFinite(ratioLimit) ? ratioLimit : -1,
-            seedingTimeLimit,
-          );
+          await torrentsApi.setTorrentShareLimits([torrent!.hash], {
+            ratioLimit,
+            seedingTimeLimit: torrent?.seeding_time_limit ?? SHARE_LIMIT_GLOBAL,
+            ...currentShareLimits(),
+          });
           await new Promise((resolve) => setTimeout(resolve, 500));
           await loadTorrentData();
           haptics.success();
           showToast(
-            t('torrentDetail.ratioLimitSet', {
-              value: value.trim() === '' ? t('common.unlimited') : ratioLimit.toFixed(2),
-            }),
+            t('torrentDetail.ratioLimitSet', { value: formatShareRatio(ratioLimit) }),
             'success',
           );
         } catch (error: unknown) {
@@ -492,35 +572,41 @@ export default function TorrentDetail() {
 
   const handleSetSeedingTimeLimit = () => {
     const current =
-      torrent?.seeding_time_limit != null && torrent.seeding_time_limit >= 0
-        ? torrent.seeding_time_limit.toString()
-        : '';
+      torrent?.seeding_time_limit != null ? torrent.seeding_time_limit.toString() : '';
     setInputModalConfig({
       title: t('torrentDetail.setSeedingTimeLimit'),
       message: t('torrentDetail.enterSeedingTimeMinutes'),
       defaultValue: current,
       keyboardType: 'numbers-and-punctuation',
       allowEmpty: true,
+      validate: (value: string) =>
+        parseShareLimitInput(value, { integer: true }) === null ? t('errors.validNumber') : null,
+      presets: shareLimitPresets,
       onConfirm: async (value: string) => {
+        const seedingTimeLimit = parseShareLimitInput(value, { integer: true });
+        if (seedingTimeLimit === null) {
+          showToast(t('errors.validNumber'), 'error');
+          return;
+        }
         setInputModalVisible(false);
         try {
           setActionLoading(true);
-          const seedingTimeLimit = value.trim() === '' ? -1 : parseInt(value, 10);
-          const ratioLimit = torrent?.ratio_limit != null ? torrent.ratio_limit : -2;
-          await torrentsApi.setTorrentShareLimits(
-            [torrent!.hash],
-            ratioLimit,
-            Number.isFinite(seedingTimeLimit) ? seedingTimeLimit : -1,
-          );
+          await torrentsApi.setTorrentShareLimits([torrent!.hash], {
+            ratioLimit: torrent?.ratio_limit ?? SHARE_LIMIT_GLOBAL,
+            seedingTimeLimit,
+            ...currentShareLimits(),
+          });
           await new Promise((resolve) => setTimeout(resolve, 500));
           await loadTorrentData();
           haptics.success();
           showToast(
             t('torrentDetail.seedingTimeLimitSet', {
               value:
-                value.trim() === '' || seedingTimeLimit < 0
-                  ? t('common.unlimited')
-                  : formatTime(seedingTimeLimit * 60),
+                seedingTimeLimit === SHARE_LIMIT_GLOBAL
+                  ? t('torrentDetail.useGlobal')
+                  : seedingTimeLimit < 0
+                    ? t('common.unlimited')
+                    : formatTime(seedingTimeLimit * 60),
             }),
             'success',
           );
@@ -701,11 +787,17 @@ export default function TorrentDetail() {
       defaultValue: properties?.dl_limit?.toString() || '0',
       keyboardType: 'numeric',
       allowEmpty: true,
+      validate: (value: string) =>
+        parseSpeedLimitInput(value) === null ? t('errors.validNumber') : null,
       onConfirm: async (value: string) => {
+        const limit = parseSpeedLimitInput(value);
+        if (limit === null) {
+          showToast(t('errors.validNumber'), 'error');
+          return;
+        }
         setInputModalVisible(false);
         try {
           setActionLoading(true);
-          const limit = parseInt(value) || 0;
           await torrentsApi.setTorrentDownloadLimit([torrent!.hash], limit);
           await new Promise((resolve) => setTimeout(resolve, 500));
           await loadTorrentData();
@@ -733,11 +825,17 @@ export default function TorrentDetail() {
       defaultValue: properties?.up_limit?.toString() || '0',
       keyboardType: 'numeric',
       allowEmpty: true,
+      validate: (value: string) =>
+        parseSpeedLimitInput(value) === null ? t('errors.validNumber') : null,
       onConfirm: async (value: string) => {
+        const limit = parseSpeedLimitInput(value);
+        if (limit === null) {
+          showToast(t('errors.validNumber'), 'error');
+          return;
+        }
         setInputModalVisible(false);
         try {
           setActionLoading(true);
-          const limit = parseInt(value) || 0;
           await torrentsApi.setTorrentUploadLimit([torrent!.hash], limit);
           await new Promise((resolve) => setTimeout(resolve, 500));
           await loadTorrentData();
@@ -969,6 +1067,32 @@ export default function TorrentDetail() {
     { label: t('torrentDetail.decrease'), value: 'decrease' },
     { label: t('torrentDetail.minimum'), value: 'min' },
   ];
+
+  /**
+   * Render a share-limit row value.
+   *
+   * `own` is the torrent's own setting (-2 = follow the global limit, -1 = none);
+   * `effective` is the limit qBittorrent will actually enforce, with -2 already
+   * resolved. Showing `own` alone reads "Unlimited" for a torrent that is in fact
+   * capped by the global limit, which is what this fixes.
+   */
+  const shareLimitValue = (
+    own: number | null | undefined,
+    effective: number | null | undefined,
+    format: (value: number) => string,
+  ): string => {
+    const described = describeShareLimit(own, effective);
+    switch (described.kind) {
+      case 'unlimited':
+        return t('common.unlimited');
+      case 'global':
+        return described.effective == null
+          ? t('common.unlimited')
+          : t('torrentDetail.globalLimit', { value: format(described.effective) });
+      case 'value':
+        return format(described.value);
+    }
+  };
 
   // ── Row render helpers ────────────────────────────────────────────────
 
@@ -1430,21 +1554,23 @@ export default function TorrentDetail() {
             {renderRows([
               tappableRow(
                 t('torrentDetail.ratioLimit'),
-                torrent.ratio_limit !== undefined && torrent.ratio_limit >= 0
-                  ? torrent.ratio_limit.toFixed(2)
-                  : t('common.unlimited'),
+                shareLimitValue(torrent.ratio_limit, torrent.max_ratio, (value) =>
+                  value.toFixed(2),
+                ),
                 handleSetRatioLimit,
               ),
               tappableRow(
                 t('torrentDetail.seedingTimeLimit'),
-                torrent.seeding_time_limit != null && torrent.seeding_time_limit >= 0
-                  ? formatTime(torrent.seeding_time_limit * 60)
-                  : t('common.unlimited'),
+                shareLimitValue(torrent.seeding_time_limit, torrent.max_seeding_time, (value) =>
+                  formatTime(value * 60),
+                ),
                 handleSetSeedingTimeLimit,
               ),
               staticRow(
                 t('torrentDetail.maxRatio'),
-                torrent.max_ratio >= 0 ? torrent.max_ratio.toFixed(2) : t('common.unlimited'),
+                torrent.max_ratio != null && torrent.max_ratio >= 0
+                  ? torrent.max_ratio.toFixed(2)
+                  : t('common.unlimited'),
               ),
               staticRow(t('torrentDetail.seedingTime'), formatTime(torrent.seeding_time)),
               properties && pathRow(t('torrentDetail.savePath'), properties.save_path),
@@ -1579,6 +1705,8 @@ export default function TorrentDetail() {
           defaultValue={inputModalConfig.defaultValue}
           keyboardType={inputModalConfig.keyboardType}
           allowEmpty={inputModalConfig.allowEmpty}
+          validate={inputModalConfig.validate}
+          presets={inputModalConfig.presets}
           onCancel={() => setInputModalVisible(false)}
           onConfirm={inputModalConfig.onConfirm}
         />
@@ -1766,14 +1894,22 @@ export default function TorrentDetail() {
             {pathModal &&
               (() => {
                 const minLeft = insets.left + PATH_POPOVER_MARGIN;
-                const maxLeft = windowWidth - insets.right - PATH_POPOVER_MARGIN - PATH_POPOVER_WIDTH;
-                const left = Math.max(minLeft, Math.min(pathModal.anchor.x - PATH_POPOVER_WIDTH / 2, maxLeft));
+                const maxLeft =
+                  windowWidth - insets.right - PATH_POPOVER_MARGIN - PATH_POPOVER_WIDTH;
+                const left = Math.max(
+                  minLeft,
+                  Math.min(pathModal.anchor.x - PATH_POPOVER_WIDTH / 2, maxLeft),
+                );
 
                 const minTop = insets.top + PATH_POPOVER_MARGIN;
-                const maxPopoverHeight = windowHeight - insets.top - insets.bottom - PATH_POPOVER_MARGIN * 2;
+                const maxPopoverHeight =
+                  windowHeight - insets.top - insets.bottom - PATH_POPOVER_MARGIN * 2;
                 const effectiveHeight = Math.min(pathPopoverHeight ?? 0, maxPopoverHeight);
                 const maxTop = windowHeight - insets.bottom - PATH_POPOVER_MARGIN - effectiveHeight;
-                const top = Math.max(minTop, Math.min(pathModal.anchor.y + PATH_POPOVER_ANCHOR_GAP, maxTop));
+                const top = Math.max(
+                  minTop,
+                  Math.min(pathModal.anchor.y + PATH_POPOVER_ANCHOR_GAP, maxTop),
+                );
 
                 return (
                   <View

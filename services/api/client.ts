@@ -9,6 +9,24 @@ import { clogDebug, clogInfo, clogWarn, clogError } from '@/services/connectivit
 import { ApiFeatures, getApiFeatures } from '@/utils/apiVersion';
 import { basicAuthHeader } from '@/utils/basicAuth';
 
+/** An error from the API client, carrying the HTTP status when the request got a response. */
+export interface ApiError extends Error {
+  status?: number;
+}
+
+/**
+ * Build the error the interceptor throws.
+ *
+ * The message text is load-bearing — callers substring-match these strings — so
+ * this only *adds* the status code alongside it, letting callers distinguish
+ * e.g. "this torrent is gone" (404) from a generic failure without parsing prose.
+ */
+function apiError(message: string, status?: number): ApiError {
+  const err = new Error(message) as ApiError;
+  if (status !== undefined) err.status = status;
+  return err;
+}
+
 class ApiClient {
   private client: AxiosInstance;
   private currentServer: ServerConfig | null = null;
@@ -141,7 +159,7 @@ class ApiClient {
         if (status === 403) {
           this.cookies = '';
           clogError('HTTP', `403 Forbidden — ${reqUrl}`);
-          throw new Error('Authentication failed. Please check your credentials.');
+          throw apiError('Authentication failed. Please check your credentials.', status);
         }
 
         // Handle rate limiting
@@ -150,7 +168,7 @@ class ApiClient {
           const retryAfter = headers['retry-after'] ?? headers['Retry-After'];
           const waitMsg = retryAfter ? ` Please retry after ${retryAfter} seconds.` : '';
           clogWarn('HTTP', `429 Rate Limited — ${reqUrl}${waitMsg}`);
-          throw new Error(`Rate limited by server.${waitMsg}`.trim());
+          throw apiError(`Rate limited by server.${waitMsg}`.trim(), status);
         }
 
         // 409 means different things on different endpoints — queueing
@@ -163,28 +181,30 @@ class ApiClient {
           );
           if (isPriorityEndpoint) {
             clogWarn('HTTP', `409 Conflict — ${reqUrl}`);
-            throw new Error(
+            throw apiError(
               'Torrent queueing must be enabled in qBittorrent to change priorities.',
+              status,
             );
           }
           const message = error.response?.data?.toString().trim();
           clogWarn('HTTP', `409 Conflict — ${reqUrl}: ${message || '(no body)'}`);
-          throw new Error(message || 'This torrent already exists or could not be added.');
+          throw apiError(message || 'This torrent already exists or could not be added.', status);
         }
 
         // Handle 404 Not Found errors
         if (status === 404) {
           const fullUrl = `${error.config?.baseURL}${error.config?.url}`;
           clogWarn('HTTP', `404 Not Found — ${fullUrl}`);
-          throw new Error(
+          throw apiError(
             `Endpoint not found: ${fullUrl}. Please check your qBittorrent version and API compatibility.`,
+            status,
           );
         }
 
         // Handle network errors
         if (error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK') {
           clogError('HTTP', `Network error (${error.code}) — ${reqUrl}`);
-          throw new Error('Connection timeout. Please check your server connection.');
+          throw apiError('Connection timeout. Please check your server connection.', status);
         }
 
         // Handle other errors
@@ -194,7 +214,7 @@ class ApiClient {
           'HTTP',
           `${status ? 'HTTP ' + status : error.code || 'Unknown'} — ${reqUrl}: ${message}`,
         );
-        throw new Error(message);
+        throw apiError(message, status);
       },
     );
   }

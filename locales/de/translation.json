@@ -926,7 +926,10 @@
     "sectionAssigned": "Zugewiesen",
     "sectionAddFromLibrary": "Aus Bibliothek hinzufügen",
     "sectionNewTag": "Neuer Tag",
-    "longPressToDelete": "Lange drücken, um aus qBittorrent zu löschen"
+    "longPressToDelete": "Lange drücken, um aus qBittorrent zu löschen",
+    "globalLimit": "Serverweit ({{value}})",
+    "useGlobal": "Global verwenden",
+    "torrentRemoved": "Dieser Torrent ist nicht mehr auf dem Server"
   },
   "filters": {
     "all": "Alle",
