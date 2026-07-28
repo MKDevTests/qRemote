@@ -1,4 +1,5 @@
 import '@/i18n';
+import * as ExpoLinking from 'expo-linking';
 import { ErrorBoundaryProps, Stack, useRootNavigationState, useRouter } from 'expo-router';
 import {
   Dimensions,
@@ -206,11 +207,14 @@ function StackNavigator() {
 
     if (!initialUrlCheckedRef.current) {
       initialUrlCheckedRef.current = true;
-      Linking.getInitialURL()
-        .then((url) => dispatchDeepLink(url))
-        .catch(() => {
-          // No initial URL — safe to ignore.
-        });
+      // RN core's Linking.getInitialURL() depends on bridge.launchOptions,
+      // which our AppDelegate patch (withNativeTorrentFileCopy) can't reliably
+      // rewrite under the New Architecture. expo-linking's getLinkingURL() is
+      // a separate, synchronous mechanism backed by a native registry that
+      // IS populated with our already-copied URL (both go through the same
+      // native open-URL callback dispatch), so use that for the cold-launch
+      // check instead.
+      void dispatchDeepLink(ExpoLinking.getLinkingURL());
     }
 
     if (pendingDeepLinkRef.current) {
