@@ -1038,6 +1038,7 @@
     "failedToResume": "Échec de la reprise du torrent",
     "failedToDelete": "Échec de la suppression du torrent",
     "failedToAdd": "Échec de l'ajout du torrent",
+    "couldNotReadTorrentFile": "Impossible de lire le fichier .torrent. Essayez de l'ouvrir à nouveau.",
     "failedToConnect": "Échec de la connexion",
     "failedToLoadServers": "Échec du chargement des serveurs",
     "checkCredentials": "Vérifiez vos identifiants.",

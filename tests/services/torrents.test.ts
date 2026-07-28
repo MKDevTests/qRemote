@@ -8,6 +8,11 @@ jest.mock('@/services/api/client', () => ({
   },
 }));
 
+const mockGetInfoAsync = jest.fn();
+jest.mock('expo-file-system/legacy', () => ({
+  getInfoAsync: (...args: unknown[]) => mockGetInfoAsync(...args),
+}));
+
 import { AxiosError } from 'axios';
 import { torrentsApi } from '@/services/api/torrents';
 import { apiClient } from '@/services/api/client';
@@ -21,6 +26,7 @@ describe('torrentsApi', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockGetApiFeatures.mockReturnValue({ useStartStopEndpoints: false });
+    mockGetInfoAsync.mockResolvedValue({ exists: true, size: 1234 });
   });
 
   describe('getTorrentList', () => {
@@ -298,6 +304,22 @@ describe('torrentsApi', () => {
       const formData = mockPostFormData.mock.calls[0][1] as FormData;
       expect(formData.get('useDownloadPath')).toBe('true');
       expect(formData.get('downloadPath')).toBe('/dl/incomplete');
+    });
+
+    it('rejects without ever calling postFormData when the source file is unreadable', async () => {
+      mockGetInfoAsync.mockResolvedValue({ exists: false });
+      await expect(
+        torrentsApi.addTorrentFile({ uri: 'file:///a.torrent', name: 'a.torrent' }),
+      ).rejects.toThrow(/couldn't read/i);
+      expect(mockPostFormData).not.toHaveBeenCalled();
+    });
+
+    it('rejects when the source file is empty (security-scoped access lapsed)', async () => {
+      mockGetInfoAsync.mockResolvedValue({ exists: true, size: 0 });
+      await expect(
+        torrentsApi.addTorrentFile({ uri: 'file:///a.torrent', name: 'a.torrent' }),
+      ).rejects.toThrow(/couldn't read/i);
+      expect(mockPostFormData).not.toHaveBeenCalled();
     });
   });
 

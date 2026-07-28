@@ -20,7 +20,7 @@ import { ApiVersionProvider } from '@/context/ApiVersionContext';
 import { TorrentProvider } from '@/context/TorrentContext';
 import { TransferProvider } from '@/context/TransferContext';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
-import { ToastProvider } from '@/context/ToastContext';
+import { ToastProvider, useToast } from '@/context/ToastContext';
 import { logStorage } from '@/services/log-storage';
 import { storageService } from '@/services/storage';
 import { apiClient } from '@/services/api/client';
@@ -114,6 +114,8 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
 
 function StackNavigator() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
+  const { showToast } = useToast();
   const router = useRouter();
   const rootNavigationState = useRootNavigationState();
   const lastHandledMagnetRef = useRef<{ value: string; at: number } | null>(null);
@@ -186,6 +188,10 @@ function StackNavigator() {
       // readiness — see persistIncomingTorrentFile for why the source URI
       // can't be trusted to survive that wait.
       const torrentFile = await persistIncomingTorrentFile(rawTorrentFile);
+      if (!torrentFile) {
+        showToast(t('errors.couldNotReadTorrentFile'), 'error');
+        return;
+      }
 
       if (!rootNavReadyRef.current) {
         pendingDeepLinkRef.current = { type: 'torrentFile', value: torrentFile };

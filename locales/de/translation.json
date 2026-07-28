@@ -1038,6 +1038,7 @@
     "failedToResume": "Torrent konnte nicht fortgesetzt werden",
     "failedToDelete": "Torrent konnte nicht gelöscht werden",
     "failedToAdd": "Torrent konnte nicht hinzugefügt werden",
+    "couldNotReadTorrentFile": "Die .torrent-Datei konnte nicht gelesen werden. Bitte erneut öffnen.",
     "failedToConnect": "Verbindung fehlgeschlagen",
     "failedToLoadServers": "Server konnten nicht geladen werden",
     "checkCredentials": "Bitte Anmeldedaten prüfen.",

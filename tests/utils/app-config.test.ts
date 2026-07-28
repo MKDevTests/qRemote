@@ -32,8 +32,15 @@ describe('app.config torrent file registration', () => {
     expect(hasTorrentType).toBe(true);
   });
 
-  it('declares LSSupportsOpeningDocumentsInPlace for ITMS-90737 compliance', () => {
+  it('declares LSSupportsOpeningDocumentsInPlace for ITMS-90737 compliance and Files "Open In" listing', () => {
+    // Must be `true` to keep qRemote listed in Files' direct "Open In" /
+    // tap-to-open menu. The withNativeTorrentFileCopy plugin is what makes
+    // reading the resulting security-scoped file reliable (see that plugin).
     expect(expoConfig?.ios?.infoPlist?.LSSupportsOpeningDocumentsInPlace).toBe(true);
+  });
+
+  it('registers the withNativeTorrentFileCopy plugin', () => {
+    expect(expoConfig?.plugins).toContain('./plugins/withNativeTorrentFileCopy');
   });
 
   it('EXPORTS the torrent UTI with the .torrent extension on iOS (issue #125)', () => {

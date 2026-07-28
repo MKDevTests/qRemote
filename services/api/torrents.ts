@@ -5,6 +5,7 @@
  * Known issues: None currently tracked.
  */
 import { AxiosError } from 'axios';
+import * as FileSystem from 'expo-file-system/legacy';
 import { apiClient } from './client';
 import {
   TorrentInfo,
@@ -295,11 +296,29 @@ export const torrentsApi = {
       downloadPath?: string;
     },
   ): Promise<void> {
+    const fileList = Array.isArray(files) ? files : [files];
+
+    // Files handed off via iOS "Open In Place" carry a security-scoped file://
+    // URI whose access can lapse before we get around to uploading it (e.g. a
+    // cold-launch race — see services/incoming-file.ts). Uploading a revoked
+    // URI can hang at the native layer with no JS-visible rejection, leaving
+    // the caller's spinner stuck forever. Fail fast instead: verify each file
+    // is actually readable right before building the request.
+    await Promise.all(
+      fileList.map(async (file) => {
+        if (!file.uri.startsWith('file://')) return;
+        const info = await FileSystem.getInfoAsync(file.uri);
+        if (!info.exists || info.size === 0) {
+          throw new Error(`Couldn't read "${file.name}". Try selecting the file again.`);
+        }
+      }),
+    );
+
     const formData = new FormData();
 
     // qBittorrent accepts multiple "torrents" file fields in a single
     // multipart request — append one per selected file.
-    (Array.isArray(files) ? files : [files]).forEach((file) => {
+    fileList.forEach((file) => {
       // @ts-expect-error React Native FormData accepts { uri, type, name } objects for file uploads
       formData.append('torrents', {
         uri: file.uri,

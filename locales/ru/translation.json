@@ -1059,6 +1059,7 @@
     "failedToResume": "Не удалось возобновить",
     "failedToDelete": "Не удалось удалить торрент",
     "failedToAdd": "Не удалось добавить торрент",
+    "couldNotReadTorrentFile": "Не удалось прочитать .torrent-файл. Попробуйте открыть его снова.",
     "failedToConnect": "Не удалось подключиться",
     "failedToLoadServers": "Не удалось загрузить серверы",
     "checkCredentials": "Проверьте учётные данные.",

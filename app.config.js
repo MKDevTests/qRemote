@@ -8,7 +8,7 @@ module.exports = {
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'automatic',
-    scheme: 'qRemote',
+    scheme: 'qremote',
     splash: {
       image: './assets/splash-icon.png',
       resizeMode: 'contain',
@@ -39,8 +39,17 @@ module.exports = {
             CFBundleURLSchemes: ['magnet'],
           },
         ],
-        // Required when CFBundleDocumentTypes is set (ITMS-90737). We import
-        // .torrent files via Linking rather than UIDocumentBrowserViewController.
+        // Required (true, not just present — ITMS-90737 only requires the key
+        // exist, but `false` demotes the app to a Share-Sheet-only receiver,
+        // dropping it from Files' direct "Open In" / tap-to-open listing).
+        // `true` means iOS hands the app a security-scoped reference to the
+        // file at its original location instead of a sandboxed copy; reading
+        // that from JS is a race the async Linking bridge usually loses (the
+        // scope can lapse before app/_layout.tsx's handler runs) — see the
+        // withNativeTorrentFileCopy plugin below, which copies the file
+        // natively inside the native open-URL callback (while the scope is
+        // still guaranteed valid) so JS only ever sees a plain, already-owned
+        // copy.
         LSSupportsOpeningDocumentsInPlace: true,
         // Register as an "Open In" handler for .torrent files (issues #88, #125).
         // LSHandlerRank must be Owner (paired with the EXPORTED declaration
@@ -85,6 +94,7 @@ module.exports = {
       'expo-secure-store',
       'expo-sharing',
       'expo-status-bar',
+      './plugins/withNativeTorrentFileCopy',
     ],
     extra: {
       router: {},
@@ -92,6 +102,12 @@ module.exports = {
         projectId: 'e2539074-777d-46d3-ae9e-9e584f9e9bb0',
       },
     },
+    "updates": {
+      "url": "https://u.expo.dev/e2539074-777d-46d3-ae9e-9e584f9e9bb0"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+  },
     owner: 'taylorcox75',
   },
 };

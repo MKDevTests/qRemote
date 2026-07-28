@@ -1038,6 +1038,7 @@
     "failedToResume": "恢复种子失败",
     "failedToDelete": "删除种子失败",
     "failedToAdd": "添加种子失败",
+    "couldNotReadTorrentFile": "无法读取该 .torrent 文件，请重新打开试试。",
     "failedToConnect": "连接失败",
     "failedToLoadServers": "加载服务器失败",
     "checkCredentials": "请检查你的凭据。",
