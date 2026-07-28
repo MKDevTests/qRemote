@@ -26,7 +26,11 @@ import { logStorage } from '@/services/log-storage';
 import { storageService } from '@/services/storage';
 import { apiClient } from '@/services/api/client';
 import { setHapticsEnabled } from '@/utils/haptics';
-import { setDebugMode as setConnectivityDebugMode } from '@/services/connectivity-log';
+import {
+  setDebugMode as setConnectivityDebugMode,
+  clogInfo,
+  clogWarn,
+} from '@/services/connectivity-log';
 import { extractMagnetLink } from '@/utils/magnet';
 import { extractTorrentFile, IncomingTorrentFile } from '@/utils/torrent-file';
 import { persistIncomingTorrentFile } from '@/services/incoming-file';
@@ -188,8 +192,15 @@ function StackNavigator() {
       // Copy into app-owned cache immediately, before waiting on navigation
       // readiness — see persistIncomingTorrentFile for why the source URI
       // can't be trusted to survive that wait.
+      // Logged so a failing "Open In" can be diagnosed from the Logs tab
+      // instead of guessing: if the URI is already under the app's own
+      // cache/incoming-torrents/ the native copy ran, and anything else means
+      // JS got the raw security-scoped URL straight from iOS.
+      clogInfo('LINK', `Incoming .torrent URI: ${rawTorrentFile.uri}`);
+
       const torrentFile = await persistIncomingTorrentFile(rawTorrentFile);
       if (!torrentFile) {
+        clogWarn('LINK', `Could not read incoming .torrent: ${rawTorrentFile.uri}`);
         showToast(t('errors.couldNotReadTorrentFile'), 'error');
         return;
       }
@@ -207,14 +218,30 @@ function StackNavigator() {
 
     if (!initialUrlCheckedRef.current) {
       initialUrlCheckedRef.current = true;
-      // RN core's Linking.getInitialURL() depends on bridge.launchOptions,
-      // which our AppDelegate patch (withNativeTorrentFileCopy) can't reliably
-      // rewrite under the New Architecture. expo-linking's getLinkingURL() is
-      // a separate, synchronous mechanism backed by a native registry that
-      // IS populated with our already-copied URL (both go through the same
-      // native open-URL callback dispatch), so use that for the cold-launch
-      // check instead.
-      void dispatchDeepLink(ExpoLinking.getLinkingURL());
+
+      // Two independent sources for the cold-launch URL, because neither is
+      // reliable alone on iOS here:
+      //  - expo-linking's getLinkingURL() reads a native registry populated
+      //    by the "open url" AppDelegate callback (the one our
+      //    withNativeTorrentFileCopy patch rewrites to an app-owned copy).
+      //  - RN core's Linking.getInitialURL() reads bridge.launchOptions,
+      //    which the New Architecture may not populate.
+      // Try both: dispatchDeepLink de-dupes by URL, so whichever arrives
+      // first wins and the other is a no-op. Do NOT reduce this to one
+      // source without testing a real cold launch — cold-launch "Open In"
+      // has regressed repeatedly on exactly this code path.
+      const expoUrl = ExpoLinking.getLinkingURL();
+      clogInfo('LINK', `Cold-launch expo-linking URL: ${expoUrl ?? '(none)'}`);
+      void dispatchDeepLink(expoUrl);
+
+      Linking.getInitialURL()
+        .then((rnUrl) => {
+          clogInfo('LINK', `Cold-launch RN URL: ${rnUrl ?? '(none)'}`);
+          return dispatchDeepLink(rnUrl);
+        })
+        .catch(() => {
+          // No initial URL — safe to ignore.
+        });
     }
 
     if (pendingDeepLinkRef.current) {
