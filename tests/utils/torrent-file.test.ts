@@ -26,7 +26,7 @@ describe('isTorrentFileUrl', () => {
   it('rejects magnet links, http URLs, and app deep links', () => {
     expect(isTorrentFileUrl('magnet:?xt=urn:btih:abc123')).toBe(false);
     expect(isTorrentFileUrl('https://example.com/file.torrent')).toBe(false);
-    expect(isTorrentFileUrl('qRemote://torrents')).toBe(false);
+    expect(isTorrentFileUrl('qremote://torrents')).toBe(false);
   });
 
   it('rejects empty and null values', () => {

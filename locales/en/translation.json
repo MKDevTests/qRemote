@@ -1059,6 +1059,7 @@
     "failedToResume": "Failed to resume torrent",
     "failedToDelete": "Failed to delete torrent",
     "failedToAdd": "Failed to add torrent",
+    "couldNotReadTorrentFile": "Couldn't read the .torrent file. Try opening it again.",
     "failedToConnect": "Failed to connect",
     "failedToLoadServers": "Failed to load servers",
     "checkCredentials": "Please check your credentials.",

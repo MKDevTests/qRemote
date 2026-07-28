@@ -28,17 +28,17 @@ describe('extractMagnetLink', () => {
   });
 
   it('extracts magnet from deep-link magnet param', () => {
-    const incomingUrl = `qRemote:///?magnet=${encodedSampleMagnet}`;
+    const incomingUrl = `qremote:///?magnet=${encodedSampleMagnet}`;
     expect(extractMagnetLink(incomingUrl)).toBe(sampleMagnet);
   });
 
   it('extracts magnet from deep-link url param', () => {
-    const incomingUrl = `qRemote:///?url=${encodedSampleMagnet}`;
+    const incomingUrl = `qremote:///?url=${encodedSampleMagnet}`;
     expect(extractMagnetLink(incomingUrl)).toBe(sampleMagnet);
   });
 
   it('returns null when no magnet link exists', () => {
-    expect(extractMagnetLink('qRemote:///?foo=bar')).toBeNull();
+    expect(extractMagnetLink('qremote:///?foo=bar')).toBeNull();
     expect(extractMagnetLink('https://example.com/file.torrent')).toBeNull();
     expect(extractMagnetLink('')).toBeNull();
     expect(extractMagnetLink(undefined)).toBeNull();

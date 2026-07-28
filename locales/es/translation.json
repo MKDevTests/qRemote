@@ -1038,6 +1038,7 @@
     "failedToResume": "No se pudo reanudar el torrent",
     "failedToDelete": "No se pudo eliminar el torrent",
     "failedToAdd": "No se pudo añadir el torrent",
+    "couldNotReadTorrentFile": "No se pudo leer el archivo .torrent. Intenta abrirlo de nuevo.",
     "failedToConnect": "Error al conectar",
     "failedToLoadServers": "Error al cargar servidores",
     "checkCredentials": "Comprueba tus credenciales.",

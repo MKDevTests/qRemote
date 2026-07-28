@@ -18,7 +18,7 @@ const sanitizeFileName = (name: string): string =>
  */
 export async function persistIncomingTorrentFile(
   file: IncomingTorrentFile,
-): Promise<IncomingTorrentFile> {
+): Promise<IncomingTorrentFile | null> {
   if (!file.uri.startsWith('file://')) {
     return file;
   }
@@ -27,8 +27,19 @@ export async function persistIncomingTorrentFile(
     await FileSystem.makeDirectoryAsync(INCOMING_TORRENTS_DIR, { intermediates: true });
     const destUri = `${INCOMING_TORRENTS_DIR}${Date.now()}-${sanitizeFileName(file.name)}`;
     await FileSystem.copyAsync({ from: file.uri, to: destUri });
+
+    // The source's security-scoped access can lapse mid-copy, which some
+    // native paths surface as a silent empty/partial file rather than a
+    // thrown error. Returning that unusable copy just moves the hang from
+    // here to the upload — verify it actually has content instead.
+    const info = await FileSystem.getInfoAsync(destUri);
+    if (!info.exists || info.size === 0) {
+      return null;
+    }
     return { uri: destUri, name: file.name };
   } catch {
-    return file;
+    // The original URI's security-scoped access may already be gone too —
+    // don't hand back a URI we can't guarantee is still readable.
+    return null;
   }
 }
