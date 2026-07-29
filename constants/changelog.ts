@@ -20,18 +20,6 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
-    version: '3.8.35',
-    date: '2026-07-28',
-    sections: [
-      {
-        title: 'Bugs Fixed',
-        items: [
-          'Fixed torrent cards with many tags squishing the downloaded/total size into unreadable text and letting long tag names overlap each other',
-        ],
-      },
-    ],
-  },
-  {
     version: '3.8.34',
     date: '2026-07-27',
     sections: [
