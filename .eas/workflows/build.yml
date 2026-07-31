@@ -1,0 +1,14 @@
+name: Create builds
+jobs:
+  ios_preview:
+    name: Build Preview
+    type: build
+    params:
+      platform: ios
+      profile: preview
+  ios_prod:
+    name: Build Production
+    type: build
+    params:
+      platform: ios
+      profile: production
