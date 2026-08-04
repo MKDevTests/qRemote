@@ -20,13 +20,28 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '3.8.TESTFLIGHT',
+    date: '2026-07-28',
+    sections: [
+      {
+        title: 'Bugs Fixed',
+        items: [
+          'Self-signed certs fix',
+          'Fixed a false "couldn\'t read torrent file" error that could briefly flash when opening a .torrent file from a cold launch',
+          'Fixed server background restoration bug',
+          'Spacing of cards',
+          'Windows drive path autocomplete for multiple drives',
+        ],
+      },
+    ],
+  },
+  {
     version: '3.8.34',
     date: '2026-07-27',
     sections: [
       {
         title: 'New Features',
         items: [
-		  'Allow self-signed-certs',
           'Global seeding limits (ratio, seeding time, and what happens when reached) can now be set from the Transfer tab',
           'Added an Unlimited shortcut to the Max Ratio and Max Seeding Time editors on the Transfer tab',
           'File path now suggested from existing torrent paths and support for windows',
