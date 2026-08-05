@@ -86,7 +86,7 @@ export default function EditServerScreen() {
 
   // Helper function to strip http:// or https:// prefix and trailing colons/slashes from host
   const stripProtocol = (hostString: string): string => {
-    return hostString.replace(/^(https?:\/\/)/i, '').replace(/[:\/]+$/, '');
+    return hostString.replace(/^(https?:\/\/)/i, '').replace(/[:/]+$/, '');
   };
 
   // Computed debug info for troubleshooting
@@ -207,7 +207,7 @@ App Version: ${APP_VERSION}`;
     try {
       await Clipboard.setStringAsync(debugText);
       showToast(t('toast.debugCopied'), 'success');
-    } catch (error) {
+    } catch {
       showToast(t('errors.failedToCopyDebug'), 'error');
     }
   };
@@ -219,10 +219,6 @@ App Version: ${APP_VERSION}`;
     }
     setTesting(false);
   };
-
-  useEffect(() => {
-    loadServer();
-  }, [id]);
 
   const loadServer = async () => {
     try {
@@ -254,13 +250,19 @@ App Version: ${APP_VERSION}`;
         showToast(t('toast.serverNotFound'), 'error');
         router.back();
       }
-    } catch (error) {
+    } catch {
       showToast(t('errors.failedToLoadServer'), 'error');
       router.back();
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadServer();
+    // loadServer isn't memoized — only re-run when id changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   const handleSave = async () => {
     if (!name.trim() || !host.trim()) {
@@ -338,7 +340,7 @@ App Version: ${APP_VERSION}`;
       updateCurrentServer(server);
       showToast(t('toast.serverSaved'), 'success');
       router.back();
-    } catch (error) {
+    } catch {
       showToast(t('errors.failedToSaveServer'), 'error');
     } finally {
       setSaving(false);
@@ -363,7 +365,7 @@ App Version: ${APP_VERSION}`;
             }
             showToast(t('toast.serverDeleted', { name }), 'success');
             router.back();
-          } catch (error) {
+          } catch {
             showToast(t('errors.failedToDeleteServer'), 'error');
           }
         },
