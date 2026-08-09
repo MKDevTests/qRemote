@@ -19,6 +19,20 @@ export interface ChangelogRelease {
 }
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '3.8.36',
+    date: '2026-08-09',
+    sections: [
+      {
+        title: 'New Features',
+        items: ['Added new add dialogue to the search page + cart like functionality'],
+      },
+      {
+        title: 'Bugs Fixed',
+        items: [],
+      },
+    ],
+  },
+  {
     version: '3.8.35',
     date: '2026-08-04',
     sections: [
@@ -46,7 +60,7 @@ export const CHANGELOG: ChangelogRelease[] = [
       {
         title: 'New Features',
         items: [
-		  'Allow self-signed-certs',
+          'Allow self-signed-certs',
           'Global seeding limits (ratio, seeding time, and what happens when reached) can now be set from the Transfer tab',
           'Added an Unlimited shortcut to the Max Ratio and Max Seeding Time editors on the Transfer tab',
           'File path now suggested from existing torrent paths and support for windows',
