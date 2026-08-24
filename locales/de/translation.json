@@ -641,7 +641,9 @@
     "enterKbs": "KiB/s eingeben",
     "fallbackHost": "Fallback-Host oder IP",
     "proxyUsername": "Proxy-Benutzername",
-    "proxyPassword": "Proxy-Passwort"
+    "proxyPassword": "Proxy-Passwort",
+    "headerName": "Header-Name",
+    "headerValue": "Header-Wert"
   },
   "actions": {
     "resume": "Fortsetzen",
@@ -754,13 +756,21 @@
     "useBasicAuth": "Basisauthentifizierung (Proxy)",
     "useBasicAuthHint": "Erforderlich, wenn ein passwortgeschützter Proxy den Server schützt",
     "apiKeyProxyConflict": "Proxy-Basisauthentifizierung kann nicht mit einem API-Schlüssel kombiniert werden — beide nutzen den Authorization-Header",
+    "customHeaders": "BENUTZERDEFINIERTE HEADER",
+    "useCustomHeaders": "Benutzerdefinierte HTTP-Header",
+    "useCustomHeadersHint": "Sendet bei jeder Anfrage zusätzliche Header — für Tunnel oder Proxys mit eigener headerbasierter Authentifizierung (z. B. Pangolin)",
+    "addHeader": "Header hinzufügen",
+    "removeHeader": "Header entfernen",
     "debugFullUrl": "Vollständige URL",
     "debugProtocol": "Protokoll",
     "debugHost": "Host",
     "debugPort": "Port",
     "debugLoginApi": "Login-API",
     "debugEmpty": "(leer)",
-    "debugDefaultPort": "Standard (80/443)"
+    "debugDefaultPort": "Standard (80/443)",
+    "debugCustomHeaders": "Benutzerdefinierte Header",
+    "debugCustomHeadersValue": "{{names}} (Werte ausgeblendet)",
+    "debugCustomHeadersNone": "Keine"
   },
   "torrentDetail": {
     "notFound": "Torrent nicht gefunden",
@@ -1079,6 +1089,8 @@
     "fillNameAndHost": "Bitte Server-Name und Host ausfüllen",
     "fillUsernamePassword": "Bitte Benutzername und Passwort eingeben",
     "fillBasicAuthUsername": "Bitte Proxy-Benutzername für Basic Auth eingeben",
+    "fillCustomHeaderFields": "Bitte Name und Wert für jeden benutzerdefinierten Header ausfüllen oder den leeren entfernen",
+    "reservedHeaderName": "„{{name}}“ wird von qRemote verwaltet und kann nicht als benutzerdefinierter Header verwendet werden",
     "fillApiKey": "Bitte einen API-Schlüssel eingeben",
     "validPort": "Bitte gültige Portnummer eingeben (1-65535)",
     "fillFallbackHost": "Bitte einen Fallback-Host angeben",
