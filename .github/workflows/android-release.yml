@@ -159,35 +159,55 @@ jobs:
           # 6 GB: a GitHub-hosted ubuntu runner has 16 GB, and the 2 GB the Expo
           # template ships is what killed the first v4.2.0 attempt with "Java
           # heap space" after 55 minutes of GC thrash.
-          ./gradlew assembleRelease --no-daemon --build-cache             -Dorg.gradle.jvmargs="-Xmx6144m -XX:MaxMetaspaceSize=1024m"             -x lintVitalAnalyzeRelease -x lintVitalReportRelease -x lintVitalRelease
+          ./gradlew assembleRelease --no-daemon --build-cache \
+            -Dorg.gradle.jvmargs="-Xmx6144m -XX:MaxMetaspaceSize=1024m" \
+            -x lintVitalAnalyzeRelease -x lintVitalReportRelease -x lintVitalRelease
 
       # Mirrors verify_release_apk in scripts/build-qremote-release.sh. An APK
       # with the wrong version, or one that is debuggable, must never reach a
       # release page.
-      - name: Verify the APK
+      #
+      # The build produces one APK per ABI (plugins/withAndroidBuildTweaks.js),
+      # so every one is checked and renamed to the name the updater matches on:
+      # qremote-<version>-<abi>.apk. A single universal app-release.apk fails
+      # the ABI extraction below rather than shipping unnoticed.
+      - name: Verify the APKs
         run: |
-          APK=android/app/build/outputs/apk/release/app-release.apk
-          test -f "$APK" || { echo "::error::no APK at $APK"; exit 1; }
           AAPT2="$(find "$ANDROID_SDK_ROOT/build-tools" -name aapt2 -type f | sort -V | tail -1)"
-          BADGING="$("$AAPT2" dump badging "$APK")"
-          echo "$BADGING" | head -3
-          NAME="$(echo "$BADGING" | sed -nE "s/.*versionName='([^']*)'.*/\1/p" | head -1)"
-          if [ "$NAME" != "${{ inputs.version }}" ]; then
-            echo "::error::APK reports versionName=$NAME, expected ${{ inputs.version }}"
+          shopt -s nullglob
+          BUILT=(android/app/build/outputs/apk/release/*-release.apk)
+          if [ "${#BUILT[@]}" -lt 2 ]; then
+            echo "::error::expected one APK per ABI, found ${#BUILT[@]}"
+            ls -l android/app/build/outputs/apk/release/ || true
             exit 1
           fi
-          if echo "$BADGING" | grep -q "application-debuggable"; then
-            echo "::error::APK is debuggable"
-            exit 1
-          fi
-          cp "$APK" "qremote-${{ inputs.version }}.apk"
-          echo "verified: $NAME, $(du -h "qremote-${{ inputs.version }}.apk" | cut -f1)"
+          for APK in "${BUILT[@]}"; do
+            BASE="$(basename "$APK")"
+            ABI="$(echo "$BASE" | sed -nE 's/^app-(.+)-release\.apk$/\1/p')"
+            if [ -z "$ABI" ]; then
+              echo "::error::no ABI in $BASE — is the abi split still configured?"
+              exit 1
+            fi
+            BADGING="$("$AAPT2" dump badging "$APK")"
+            NAME="$(echo "$BADGING" | sed -nE "s/.*versionName='([^']*)'.*/\1/p" | head -1)"
+            if [ "$NAME" != "${{ inputs.version }}" ]; then
+              echo "::error::$BASE reports versionName=$NAME, expected ${{ inputs.version }}"
+              exit 1
+            fi
+            if echo "$BADGING" | grep -q "application-debuggable"; then
+              echo "::error::$BASE is debuggable"
+              exit 1
+            fi
+            cp "$APK" "qremote-${{ inputs.version }}-$ABI.apk"
+          done
+          echo "verified ${#BUILT[@]} APKs at version ${{ inputs.version }}:"
+          ls -lh qremote-${{ inputs.version }}-*.apk
 
-      - name: Upload the APK as a build artifact
+      - name: Upload the APKs as a build artifact
         uses: actions/upload-artifact@v4
         with:
           name: qremote-${{ inputs.version }}
-          path: qremote-${{ inputs.version }}.apk
+          path: qremote-${{ inputs.version }}-*.apk
           if-no-files-found: error
 
       - name: Commit, tag and publish
@@ -202,7 +222,8 @@ jobs:
           git tag -a "v${{ inputs.version }}" -m "qRemote v${{ inputs.version }}"
           git push origin main
           git push origin "v${{ inputs.version }}"
-          gh release create "v${{ inputs.version }}" "qremote-${{ inputs.version }}.apk" \
+          # Unquoted on purpose: every per-ABI APK is attached.
+          gh release create "v${{ inputs.version }}" qremote-${{ inputs.version }}-*.apk \
             --title "qRemote v${{ inputs.version }}" \
             --generate-notes
 

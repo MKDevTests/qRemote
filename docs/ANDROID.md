@@ -15,8 +15,10 @@ documented in [AGENTS.md](../AGENTS.md).
 ./scripts/build-qremote-release.sh
 ```
 
-Builds a signed APK, verifies it, and installs it on a connected device. The
-APK lands at `android/app/build/outputs/apk/release/app-release.apk`.
+Builds one signed APK per ABI, verifies each, and installs the one the
+connected device can run. They land as
+`android/app/build/outputs/apk/release/app-<abi>-release.apk` — there is no
+universal `app-release.apk` any more, see [APK size and ABIs](#apk-size-and-abis).
 
 ---
 
@@ -85,6 +87,19 @@ four Android ABIs — **107 MB**. The plugin narrows `reactNativeArchitectures` 
 `android/gradle.properties` to `arm64-v8a,armeabi-v7a`, which brings it to
 **64 MB**. Both ARM ABIs are kept so older 32-bit devices still install; the two
 dropped ones are x86 and x86_64, which only emulators use.
+
+Since **v4.3.0** the two remaining ABIs also ship *separately*, via
+`splits { abi }` with `universalApk false`. A device can only ever run one of
+them, so putting both in one file doubled the download for nothing: two APKs of
+roughly **35 MB** replace one of 59 MB. The release attaches both, and
+`services/updater.ts` picks by `Device.supportedCpuArchitectures` — falling back
+to a universal APK, which is what every release up to v4.2.0 attached, so an
+older release still updates cleanly.
+
+`versionCode` is deliberately **not** offset per ABI. That trick exists for the
+Play Store, which requires every uploaded artifact to carry a distinct code;
+here the assets are picked by filename and a device can only install its own
+split anyway.
 
 It has to be that property rather than `defaultConfig.ndk.abiFilters`. The React
 Native Gradle plugin derives its own `abiFilters` from
@@ -193,9 +208,10 @@ From a clean `main`, it will:
 1. bump `version` in `package.json` — the single source of truth, from which
    `app.config.js` derives both the `versionName` and the integer
    `versionCode` (`MAJOR*10000 + MINOR*100 + PATCH`, so `3.9.0` → `30900`)
-2. build and verify the signed APK
+2. build and verify the signed APKs, one per ABI
 3. commit, tag `v3.9.0`, push both
-4. create the GitHub release with `qremote-3.9.0.apk` attached
+4. create the GitHub release with `qremote-3.9.0-arm64-v8a.apk` and
+   `qremote-3.9.0-armeabi-v7a.apk` attached
 
 Add `--dry-run` to do everything up to (not including) the commit. Any failure
 before the push rolls the version bump back and deletes the local tag.

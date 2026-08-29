@@ -86,11 +86,21 @@ echo "==> Building release APK"
 # which is what makes a rebuild after `expo prebuild` minutes instead of the
 # full ~17. Android Lint on the release variant is skipped: `npm run lint`,
 # `tsc` and the test suite already gate a release, and lintVital adds minutes.
-./gradlew :app:assembleRelease -Dorg.gradle.jvmargs="$JVM_ARGS" --build-cache     -x lintVitalAnalyzeRelease -x lintVitalReportRelease -x lintVitalRelease
+./gradlew :app:assembleRelease -Dorg.gradle.jvmargs="$JVM_ARGS" --build-cache \
+    -x lintVitalAnalyzeRelease -x lintVitalReportRelease -x lintVitalRelease
 
 cd "$REPO_ROOT"
-APK="android/app/build/outputs/apk/release/app-release.apk"
-[[ -f "$APK" ]] || { echo "APK not found at $APK" >&2; exit 1; }
+
+# One APK per ABI since v4.3.0 — see plugins/withAndroidBuildTweaks.js. There is
+# deliberately no universal build any more, so collect whatever the split
+# produced rather than reaching for a fixed filename.
+APK_DIR="android/app/build/outputs/apk/release"
+APKS=()
+while IFS= read -r line; do APKS+=("$line"); done < <(ls -1 "$APK_DIR"/*-release.apk 2>/dev/null)
+if (( ${#APKS[@]} == 0 )); then
+    echo "No APK found in $APK_DIR" >&2
+    exit 1
+fi
 
 # A release APK that is debuggable, or carries the wrong version, is worse than
 # a failed build: it looks shippable. Check before anyone can publish it.
@@ -130,12 +140,30 @@ verify_release_apk() {
     echo "    Verified: versionName=$name versionCode=$code (not debuggable)"
 }
 
-verify_release_apk "$APK"
+for apk in "${APKS[@]}"; do
+    verify_release_apk "$apk"
+    echo "==> APK ready: $apk ($(du -h "$apk" | cut -f1))"
+done
 
-echo "==> APK ready: $APK ($(du -h "$APK" | cut -f1))"
+# Pick the split the attached device can actually run. adb install would reject
+# the wrong one with INSTALL_FAILED_NO_MATCHING_ABIS, which is safe but useless.
+pick_apk_for_device() {
+    local adb abi apk
+    adb="$(resolve_adb)" || { echo "${APKS[0]}"; return 0; }
+    abi="$("$adb" shell getprop ro.product.cpu.abi 2>/dev/null | tr -d "\r\n")"
+    if [[ -n "$abi" ]]; then
+        for apk in "${APKS[@]}"; do
+            [[ "$apk" == *"-$abi-"* ]] && { echo "$apk"; return 0; }
+        done
+        echo "    WARN: no APK built for the device's ABI ($abi) — using the first." >&2
+    fi
+    echo "${APKS[0]}"
+}
 
 if [[ $DO_INSTALL == 1 ]]; then
-    install_apk "$REPO_ROOT/$APK"
+    TARGET="$(pick_apk_for_device)"
+    echo "==> Installing $(basename "$TARGET")"
+    install_apk "$REPO_ROOT/$TARGET"
     echo ""
     echo "==> Launch with:"
     echo "    adb shell monkey -p io.github.mkdevtests.qremote -c android.intent.category.LAUNCHER 1"

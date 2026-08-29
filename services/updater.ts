@@ -1,7 +1,9 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as Device from 'expo-device';
 import { APP_VERSION } from '@/utils/version';
+import { ApkAsset, pickApkAsset } from '@/utils/apk-asset';
 
 /**
  * updater.ts — Android in-app updates from GitHub releases.
@@ -84,11 +86,7 @@ export function compareVersions(a: string, b: string): number {
   return 0;
 }
 
-interface GitHubAsset {
-  name?: string;
-  browser_download_url?: string;
-  size?: number;
-}
+type GitHubAsset = ApkAsset;
 
 interface GitHubRelease {
   tag_name?: string;
@@ -100,17 +98,18 @@ interface GitHubRelease {
   assets?: GitHubAsset[];
 }
 
-/** The first `.apk` attached to the release, or null. */
+/**
+ * The APK on the release built for this device's CPU — see utils/apk-asset.ts.
+ *
+ * Releases ship one APK per ABI, roughly 35 MB each against the 59 MB of the
+ * universal build they replaced, so this has to choose rather than take the
+ * first attachment. `supportedCpuArchitectures` is ordered by preference and
+ * is null on platforms that will not say; both cases fall back to a universal
+ * APK when the release has one, which is what every release up to v4.2.0
+ * attached.
+ */
 function findApkAsset(release: GitHubRelease): GitHubAsset | null {
-  const assets = Array.isArray(release.assets) ? release.assets : [];
-  return (
-    assets.find(
-      (asset) =>
-        typeof asset.browser_download_url === 'string' &&
-        typeof asset.name === 'string' &&
-        asset.name.toLowerCase().endsWith('.apk'),
-    ) ?? null
-  );
+  return pickApkAsset(release.assets, Device.supportedCpuArchitectures);
 }
 
 /**

@@ -30,6 +30,15 @@ jest.mock('expo-file-system/legacy', () => ({
   getContentUriAsync: (...a: unknown[]) => getContentUriAsync(...a),
 }));
 
+// The device reports the ABIs it can run, most preferred first; the updater
+// uses that to pick between the per-ABI APKs on a release.
+let supportedCpuArchitectures: string[] | null = ['arm64-v8a', 'armeabi-v7a'];
+jest.mock('expo-device', () => ({
+  get supportedCpuArchitectures() {
+    return supportedCpuArchitectures;
+  },
+}));
+
 const startActivityAsync = jest.fn();
 jest.mock('expo-intent-launcher', () => ({
   startActivityAsync: (...a: unknown[]) => startActivityAsync(...a),
@@ -130,6 +139,39 @@ describe('checkForUpdate', () => {
   it('reports up-to-date when the latest release is older', async () => {
     mockFetch(200, releaseBody('v3.0.0'));
     expect(await checkForUpdate()).toEqual({ status: 'up-to-date', latestVersion: '3.0.0' });
+  });
+
+  // Releases from v4.3.0 attach one APK per ABI instead of one universal
+  // build; the wrong one would install libraries this CPU cannot load.
+  it('downloads the APK built for this device', async () => {
+    const url = (abi: string) => `https://example.com/qremote-3.9.0-${abi}.apk`;
+    const split = {
+      ...releaseBody('v3.9.0'),
+      assets: [
+        { name: 'qremote-3.9.0-arm64-v8a.apk', browser_download_url: url('arm64-v8a'), size: 1 },
+        {
+          name: 'qremote-3.9.0-armeabi-v7a.apk',
+          browser_download_url: url('armeabi-v7a'),
+          size: 2,
+        },
+      ],
+    };
+
+    mockFetch(200, split);
+    let result = await checkForUpdate();
+    expect(result.status).toBe('available');
+    expect((result as { update: AvailableUpdate }).update.apkName).toBe(
+      'qremote-3.9.0-arm64-v8a.apk',
+    );
+
+    supportedCpuArchitectures = ['armeabi-v7a'];
+    mockFetch(200, split);
+    result = await checkForUpdate();
+    expect((result as { update: AvailableUpdate }).update.apkName).toBe(
+      'qremote-3.9.0-armeabi-v7a.apk',
+    );
+
+    supportedCpuArchitectures = ['arm64-v8a', 'armeabi-v7a'];
   });
 
   it('reports no-asset when a newer release has no APK attached', async () => {
