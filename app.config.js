@@ -182,6 +182,9 @@ module.exports = {
       // skips them for -p ios.
       './plugins/withAndroidBuildTweaks',
       './plugins/withAndroidNetworkSecurity',
+      // Must come after the intentFilters above are applied: it moves the
+      // magnet scheme out of MainActivity's generated filter.
+      './plugins/withMagnetCollector',
     ],
     extra: {
       router: {},

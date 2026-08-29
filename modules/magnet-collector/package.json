@@ -1,0 +1,9 @@
+{
+  "name": "magnet-collector",
+  "version": "1.0.0",
+  "description": "Local Expo module: an invisible Android activity that captures magnet links into a queue without bringing qRemote to the foreground.",
+  "main": "index.ts",
+  "types": "index.ts",
+  "license": "MIT",
+  "private": true
+}

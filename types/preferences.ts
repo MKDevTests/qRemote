@@ -124,6 +124,18 @@ export interface AppPreferences {
    */
   defaultSequentialDownload: boolean;
 
+  /**
+   * Magnet basket collect mode: magnet links go to a queue instead of opening
+   * the add-torrent screen.
+   *
+   * On Android this also flips which manifest component owns the `magnet:`
+   * scheme (see modules/magnet-collector), so the link is captured without the
+   * app ever appearing. On iOS there is no equivalent — the app always comes
+   * to the front — and the basket simply collects from the normal deep-link
+   * path instead.
+   */
+  magnetBasketMode: boolean;
+
   /** Duration in ms for toast notifications */
   toastDuration: number;
 
@@ -206,6 +218,7 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
   lastDownloadPath: '',
   defaultPriority: 0,
   defaultSequentialDownload: false,
+  magnetBasketMode: false,
   toastDuration: 3000,
   hapticFeedback: true,
   autoConnectLastServer: true,

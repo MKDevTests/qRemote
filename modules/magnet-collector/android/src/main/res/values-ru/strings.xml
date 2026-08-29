@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="magnet_already_collected">Уже в корзине магнетов</string>
+    <plurals name="magnet_collected">
+        <item quantity="one">%d магнет в корзине</item>
+        <item quantity="few">%d магнета в корзине</item>
+        <item quantity="many">%d магнетов в корзине</item>
+        <item quantity="other">%d магнета в корзине</item>
+    </plurals>
+</resources>

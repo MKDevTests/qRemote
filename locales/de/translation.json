@@ -628,6 +628,21 @@
       "ruleSavedToast": "Regel gespeichert",
       "ruleDeletedToast": "Regel gelöscht",
       "ruleRenamedToast": "Regel umbenannt"
+    },
+    "magnetBasket": {
+      "title": "Magnet-Korb",
+      "collectMode": "Magnets sammeln",
+      "collectModeHintSilent": "Magnet-Links landen direkt im Korb, ohne qRemote zu öffnen",
+      "collectModeHintForeground": "Magnet-Links landen im Korb statt im Hinzufügen-Bildschirm",
+      "emptyTitle": "Korb ist leer",
+      "emptyMessage": "Sammeln einschalten und irgendwo Magnet-Links antippen. Sie landen hier.",
+      "unnamed": "Magnet ohne Namen",
+      "addAll": "{{count}} hinzufügen",
+      "clearAll": "Korb leeren",
+      "clearConfirmTitle": "Korb leeren?",
+      "clearConfirmMessage": "{{count}} gesammelte Links werden verworfen.",
+      "collectedToast": "Gesammelt — {{count}} im Korb",
+      "duplicateToast": "Schon im Korb"
     }
   },
   "placeholders": {

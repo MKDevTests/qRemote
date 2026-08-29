@@ -649,6 +649,21 @@
       "ruleSavedToast": "Правило сохранено",
       "ruleDeletedToast": "Правило удалено",
       "ruleRenamedToast": "Правило переименовано"
+    },
+    "magnetBasket": {
+      "title": "Корзина магнетов",
+      "collectMode": "Собирать магнеты",
+      "collectModeHintSilent": "Магнет-ссылки попадают прямо в корзину, не открывая qRemote",
+      "collectModeHintForeground": "Магнет-ссылки попадают в корзину вместо экрана добавления",
+      "emptyTitle": "Корзина пуста",
+      "emptyMessage": "Включите сбор и нажимайте магнет-ссылки где угодно. Они окажутся здесь.",
+      "unnamed": "Магнет без имени",
+      "addAll": "Добавить {{count}}",
+      "clearAll": "Очистить корзину",
+      "clearConfirmTitle": "Очистить корзину?",
+      "clearConfirmMessage": "Собранные ссылки будут удалены: {{count}}.",
+      "collectedToast": "Собрано — в корзине {{count}}",
+      "duplicateToast": "Уже в корзине"
     }
   },
   "placeholders": {

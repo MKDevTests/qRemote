@@ -45,7 +45,7 @@ How to work in this repo, before anything about the code itself.
 ### Think in API terms first
 
 The target is the **qBittorrent WebUI API v2**
-([5.0 reference](https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0))).
+([5.0 reference](<https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)>)).
 Almost every request the user makes is an API question wearing a UI costume. Work
 through these three before writing code, and raise a problem early rather than
 shipping a plausible-looking guess:
@@ -64,7 +64,7 @@ system**. Check against: preference keys (`types/preferences.ts`), `colors` keys
 safe; renaming and repurposing are not. See [§8 Critical Rules](#8-critical-rules).
 
 **3. Does it still work on qBittorrent 4.x?**
-([4.1 reference](https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-4.1)))
+([4.1 reference](<https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-4.1)>))
 Not every feature has to — some endpoints genuinely only exist in 5.0 — but the
 **main features must stay usable on 4.x**. When a capability is version-dependent,
 gate it rather than dropping 4.x support.
@@ -85,7 +85,7 @@ version rather than the qBittorrent version:
 > qBit 5.0 renamed several things (`paused` → `stopped` on `torrents/add`,
 > `start_paused_enabled` → `add_stopped_enabled` in preferences), and these
 > renames are per-site: handling one does not handle the others. When you add a
-> version-dependent parameter, gate it *and* verify against the older wiki.
+> version-dependent parameter, gate it _and_ verify against the older wiki.
 
 ### Don't burn runs
 
@@ -98,12 +98,12 @@ individual edit or "just to be safe." Trust the edit and keep working.
 **2. Handing back a non-trivial change → the impacted suites only.** Never the
 full run here. Pick the narrowest command that covers what you actually touched:
 
-| What you changed | What to run |
-|---|---|
-| One module that has a test | That one suite — `npm test -- tests/utils/format.test.ts` (~18s). Same form for `tests/services/…` and `tests/rn/…`. |
-| Pure logic — `utils/`, `services/`, locales | `npm test -- --selectProjects node` (skips the slow jest-expo project) |
-| Components, hooks, context | `npm test -- --selectProjects rn` |
-| Types, or a change that crosses many files | `npx tsc --noEmit` |
+| What you changed                            | What to run                                                                                                          |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| One module that has a test                  | That one suite — `npm test -- tests/utils/format.test.ts` (~18s). Same form for `tests/services/…` and `tests/rn/…`. |
+| Pure logic — `utils/`, `services/`, locales | `npm test -- --selectProjects node` (skips the slow jest-expo project)                                               |
+| Components, hooks, context                  | `npm test -- --selectProjects rn`                                                                                    |
+| Types, or a change that crosses many files  | `npx tsc --noEmit`                                                                                                   |
 
 **Trivial edits need nothing** — a comment, a copy tweak, a doc line, a single
 string. Use judgment; the point is to catch real breakage, not to perform rigor.
@@ -128,18 +128,18 @@ reading too much is much higher than it looks at the moment you do it.
 - **Don't re-read a file you just edited** to confirm the edit — the edit tool
   already failed loudly if it didn't apply.
 - **Read the whole file when you're about to change it substantially.** This rule
-  is about avoiding *incidental* bulk, not about editing blind.
+  is about avoiding _incidental_ bulk, not about editing blind.
 
 ### Commit-time checks
 
 Only now do you run the whole thing — once, as a batch:
 
-| Command | Bar |
-|---|---|
+| Command            | Bar                                                                             |
+| ------------------ | ------------------------------------------------------------------------------- |
 | `npx tsc --noEmit` | Exit 0. Currently clean. Incremental via `.tsbuildinfo` (~25s warm, ~85s cold). |
-| `npm test` | All passing, both projects — see [Testing](#7-testing). |
-| `npm run lint` | **Zero errors.** Warnings are baseline noise; the count drifts, don't chase it. |
-| `npm run format` | Prettier. Run it last, so it also formats anything you just changed. |
+| `npm test`         | All passing, both projects — see [Testing](#7-testing).                         |
+| `npm run lint`     | **Zero errors.** Warnings are baseline noise; the count drifts, don't chase it. |
+| `npm run format`   | Prettier. Run it last, so it also formats anything you just changed.            |
 
 Then, in the same pre-commit pass:
 
@@ -178,11 +178,11 @@ branches use a `claude/…` prefix.
 > merge straight into `main` by PR. If you ever see instructions elsewhere in
 > this file referring to `develop`, they are upstream leftovers — report them.
 
-| Branch | Role |
-|---|---|
-| *your branch* | Where every commit goes. Cut from `main`, merged back by PR. |
-| `main` | Release branch. Android releases are cut from it with `scripts/release-qremote.sh` — see [docs/ANDROID.md](docs/ANDROID.md). |
-| `coverage` | Machine-written. The `coverage.yml` workflow force-pushes the README badge's `badge.json` here. Never branch from it or commit to it by hand. |
+| Branch        | Role                                                                                                                                          |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| _your branch_ | Where every commit goes. Cut from `main`, merged back by PR.                                                                                  |
+| `main`        | Release branch. Android releases are cut from it with `scripts/release-qremote.sh` — see [docs/ANDROID.md](docs/ANDROID.md).                  |
+| `coverage`    | Machine-written. The `coverage.yml` workflow force-pushes the README badge's `badge.json` here. Never branch from it or commit to it by hand. |
 
 Two workflows live in `.github/workflows/`: `coverage.yml` (badge, on every push
 to `main`) and `android-release.yml` (manual `workflow_dispatch`, cuts a signed
@@ -269,9 +269,9 @@ re-add one without being asked.
 ## 4. Architecture
 
 - **Routing** — Expo Router, file-based, in `app/`. Parenthesized `(groupname)`
-  segments are route *groups*: they organize files but are **omitted from URLs**.
+  segments are route _groups_: they organize files but are **omitted from URLs**.
   The tab bar lives in `app/(tabs)/_layout.tsx`. Screens that must keep the tab
-  bar visible live in nested Stacks *under* a tab, never as siblings of `(tabs)`
+  bar visible live in nested Stacks _under_ a tab, never as siblings of `(tabs)`
   on the root stack. The root stack (`app/_layout.tsx`) anchors on `(tabs)`, so
   dismissing a modal doesn't wipe the tab navigator.
 - **State** — React Context + TanStack Query.
@@ -306,13 +306,13 @@ JSON-stringified into `server_custom_headers_{id}` and forced to `[]` in
 AsyncStorage.
 
 Be deliberate whenever you touch code that persists a `ServerConfig` — including
-paths that rewrite the *whole* server list, such as add, edit, delete, and
+paths that rewrite the _whole_ server list, such as add, edit, delete, and
 import. A secret must never reach AsyncStorage, and bulk rewrites are the easiest
 place to let one slip through.
 
 ### Auth modes
 
-A server's auth mode is *derived*, not stored — see `utils/authMode.ts`
+A server's auth mode is _derived_, not stored — see `utils/authMode.ts`
 (`password` | `apiKey` | `none`). Legacy records that only ever set `bypassAuth`
 keep working; when both `useApiKey` and `bypassAuth` are set, API key wins.
 
@@ -324,20 +324,20 @@ Complete map. Trust it.
 
 ### Screens (`app/`, Expo Router)
 
-| Path | Notes |
-|---|---|
-| `app/(tabs)/(torrents)/` | Torrents tab as a nested stack: `index` list, `torrent/[hash]`, `torrent/files`, `torrent/manage-trackers`. Group is omitted from URLs → `/`, `/torrent/[hash]`. |
-| `app/(tabs)/search.tsx` | Search tab: job polling UI, plugin/category/indexer filter chips, client-side sort, collapsing header. Optional auto-tag-by-tracker on add (`autoCategorizeByTracker` pref — tags Search downloads only; the key name is historical). |
-| `app/(tabs)/transfer.tsx` | Transfer stats, global speed and seeding limits. |
-| `app/(tabs)/logs.tsx` | Connectivity logs. `href: null` — reached from Settings → Advanced, not a visible tab. |
-| `app/(tabs)/rss/` | RSS Feeds tab (`index` tree + `feed` detail). `href` is null until connected **and** the server's `rss_processing_enabled` is on. Rules and settings screens do **not** go here — they live under Settings. |
-| `app/(tabs)/settings/` | Settings tab as a nested stack. See sub-screens below. |
-| `app/(tabs)/_layout.tsx` | Tab bar and tab gating. |
-| `app/_layout.tsx` | Root providers, theme, deep-link handling. Anchors on `(tabs)`. |
-| `app/+native-intent.ts` | Suppresses Router navigation for magnet / `.torrent` URLs. |
-| `app/torrents/add.tsx` | Add-torrent flow (magnet or file, plus options). Root stack → no tab bar. Uses `PathAutocompleteInput`. |
-| `app/search/plugins.tsx` | Search plugin install/enable/uninstall (`app/search/_layout.tsx` stack). Root stack. Also linked from the Settings hub. |
-| `app/server/add.tsx`, `app/server/[id].tsx` | Server add/edit, presented as native modal sheets → they mount `<ModalToast/>` locally. |
+| Path                                        | Notes                                                                                                                                                                                                                                 |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `app/(tabs)/(torrents)/`                    | Torrents tab as a nested stack: `index` list, `torrent/[hash]`, `torrent/files`, `torrent/manage-trackers`, `magnet-basket`. Group is omitted from URLs → `/`, `/torrent/[hash]`, `/magnet-basket`.                                   |
+| `app/(tabs)/search.tsx`                     | Search tab: job polling UI, plugin/category/indexer filter chips, client-side sort, collapsing header. Optional auto-tag-by-tracker on add (`autoCategorizeByTracker` pref — tags Search downloads only; the key name is historical). |
+| `app/(tabs)/transfer.tsx`                   | Transfer stats, global speed and seeding limits.                                                                                                                                                                                      |
+| `app/(tabs)/logs.tsx`                       | Connectivity logs. `href: null` — reached from Settings → Advanced, not a visible tab.                                                                                                                                                |
+| `app/(tabs)/rss/`                           | RSS Feeds tab (`index` tree + `feed` detail). `href` is null until connected **and** the server's `rss_processing_enabled` is on. Rules and settings screens do **not** go here — they live under Settings.                           |
+| `app/(tabs)/settings/`                      | Settings tab as a nested stack. See sub-screens below.                                                                                                                                                                                |
+| `app/(tabs)/_layout.tsx`                    | Tab bar and tab gating.                                                                                                                                                                                                               |
+| `app/_layout.tsx`                           | Root providers, theme, deep-link handling. Anchors on `(tabs)`.                                                                                                                                                                       |
+| `app/+native-intent.ts`                     | Suppresses Router navigation for magnet / `.torrent` URLs.                                                                                                                                                                            |
+| `app/torrents/add.tsx`                      | Add-torrent flow (magnet or file, plus options). Root stack → no tab bar. Uses `PathAutocompleteInput`.                                                                                                                               |
+| `app/search/plugins.tsx`                    | Search plugin install/enable/uninstall (`app/search/_layout.tsx` stack). Root stack. Also linked from the Settings hub.                                                                                                               |
+| `app/server/add.tsx`, `app/server/[id].tsx` | Server add/edit, presented as native modal sheets → they mount `<ModalToast/>` locally.                                                                                                                                               |
 
 **Settings sub-screens** — hub order on `index` is Servers → Appearance → Server
 Settings → RSS → Search Plugins → Advanced, then What's New → About, then
@@ -363,7 +363,7 @@ nested under `advanced`, not on the hub.
   behind a shared in-flight promise. qBittorrent ties search jobs to the session,
   so **never call it eagerly** on foreground/AppState events — only reactively,
   after a request has actually failed. `disconnect()` clears the session but
-  *keeps* `currentServer` for one-tap reconnect from Settings; call
+  _keeps_ `currentServer` for one-tap reconnect from Settings; call
   `forgetCurrentServer()` when that server is deleted, and `updateCurrentServer()`
   after editing it so one-tap Connect doesn't retry stale credentials.
 - **`TorrentContext.tsx`** — rid-based incremental sync, plus the reactive
@@ -375,6 +375,16 @@ nested under `advanced`, not on the hub.
 - **`ThemeContext.tsx`** — `useTheme()`, the `colors` object, user overrides.
 - **`ApiVersionContext.tsx`** — detected qBittorrent API version → feature gating
   through `utils/apiVersion.ts`.
+- **`MagnetBasketContext.tsx`** — the magnet basket: a **persisted** queue of
+  magnet links (AsyncStorage via `services/magnet-basket-storage.ts`). Unlike
+  the Search cart it survives a restart, because collecting happens over time
+  and often while the app is closed. Two producers feed it and must not fight:
+  JS (a magnet deep link arriving while collect mode is on, in
+  `app/_layout.tsx`) and the native collector's inbox, drained on hydration and
+  on every AppState `active`. **Native never writes the basket, JS never writes
+  the inbox.** Checkout goes to `app/torrents/add.tsx` with `fromBasket=1`,
+  which prefills the textarea one URI per line and clears the basket only on a
+  successful add.
 - **`SearchCartContext.tsx`** — session-scoped queue of Search results the user
   wants to add together (#217). Not persisted — plugin download URLs are often
   session/token-bound. Dedupes by `fileUrl`. Consumed by `app/torrents/add.tsx`
@@ -446,6 +456,10 @@ Thin objects over `apiClient`.
   secrets when an id already exists.
 - **`storage.ts`** — AsyncStorage preferences (typed shape and defaults in
   `types/preferences.ts`).
+- **`magnet-basket-storage.ts`** — the magnet basket's own AsyncStorage key.
+  Separate from `storage.ts` on purpose: preferences are small settings written
+  whole, the basket is a working list. A failed read yields an empty basket
+  rather than throwing.
 - **`incoming-file.ts`** — copies an incoming `.torrent` into the app cache
   before iOS's security-scoped access, or Android's per-activity `content://`
   read grant, can lapse.
@@ -460,6 +474,16 @@ Thin objects over `apiClient`.
 
 ### Native modules (`modules/`)
 
+- **`magnet-collector`** — Android-only local Expo module behind the magnet
+  basket's silent collect mode. `MagnetCollectActivity` is transparent, appends
+  the link to a SharedPreferences inbox and calls `finish()`, so a magnet
+  tapped in the browser never brings qRemote to the front. Use
+  `Theme.Translucent.NoTitleBar`, **not `Theme.NoDisplay`** — the latter throws
+  IllegalStateException on Android 8+ for exactly this pattern. The store uses
+  `commit()`, not `apply()`: the process can die the moment the activity ends.
+  No iOS half exists and none can — a URL scheme always foregrounds the target
+  app — so `supportsSilentCollect` is false there and the basket collects
+  through the normal deep-link path instead.
 - **`insecure-cert-allowlist`** — local Expo module (Swift + an Obj-C category
   on `RCTHTTPRequestHandler`) backing the per-server "Allow Self-Signed
   Certificate" toggle. RN's default iOS HTTP handler never implements the TLS
@@ -473,7 +497,7 @@ Thin objects over `apiClient`.
   unchanged. Requires `npm run xcode` to pick up (new native code, not just a
   generated-file patch).
 
-  **Android** side added in this fork: OkHttp *does* accept a custom trust
+  **Android** side added in this fork: OkHttp _does_ accept a custom trust
   manager, so instead of a category the module replaces React Native's
   `OkHttpClientFactory` (installed from the module's `OnCreate`, before any
   request causes a client to be cached). Same rule — real validation first, the
@@ -485,6 +509,15 @@ Thin objects over `apiClient`.
 
 - **`plugins/withNativeTorrentFileCopy.js`** — iOS `withAppDelegate` mod;
   copies an incoming `.torrent` natively inside the open-URL callback.
+- **`plugins/withMagnetCollector.js`** — manifest surgery for the magnet
+  basket's collect mode. Adds an `<activity-alias>` owning the `magnet:` scheme
+  (enabled) and the collector activity (disabled); exactly one is ever on,
+  flipped at runtime by `MagnetCollectorModule.setCollectModeEnabled`. **An
+  intent filter cannot be enabled on its own** — `enabled` belongs to the
+  component — and disabling MainActivity would take the launcher icon with it,
+  which is the whole reason for the alias. It also extracts _only_ the magnet
+  `<data>` element out of MainActivity's generated filter, because Expo merges
+  `magnet` and the dev-client's `exp+qremote` into one.
 - **`plugins/withAndroidNetworkSecurity.js`** — writes
   `res/xml/network_security_config.xml` and points the manifest at it:
   cleartext HTTP (LAN qBittorrent is HTTP) and user-installed CAs (Android
@@ -492,7 +525,7 @@ Thin objects over `apiClient`.
   in the Expo schema** — setting it there is dropped in silence.
 - **`plugins/withAndroidBuildTweaks.js`** — Android-only mods: a `.debug`
   `applicationIdSuffix` (side-by-side installs), a release signing config
-  pointing *outside* the generated tree so the signature is stable across
+  pointing _outside_ the generated tree so the signature is stable across
   prebuilds, and `reactNativeArchitectures` narrowed to the two ARM ABIs
   (`defaultConfig.ndk.abiFilters` does **not** work — RN's Gradle plugin
   overwrites it later and the APK silently keeps all four). Throws at prebuild
@@ -534,7 +567,13 @@ label, completion and ETA rules) · `limit-input.ts` (share-limit sentinels:
 `customHeaders.ts` (per-server custom HTTP headers — sanitize/validate, and the
 reserved-name set the app manages itself: Authorization, Cookie, Referer,
 Origin, Content-Type, Host — #228) ·
-`magnet.ts` / `torrent-file.ts` (incoming link and file parsing) · `rss.ts`
+`magnet.ts` / `torrent-file.ts` (incoming link and file parsing; `magnet.ts` also
+has `getMagnetInfoHash` / `getMagnetDisplayName` — note `new URL()` is useless on
+a `magnet:` URI, the query has to be sliced at the first `?`) ·
+`magnet-basket.ts` (the magnet basket's pure logic: add/remove/dedupe/restore.
+Dedupe is by **info hash**, not by URI — the same release from two indexers
+carries different trackers and `dn` but identical content. `parseStoredBasket`
+drops malformed entries rather than failing the whole basket) · `rss.ts`
 (RSS tree flattening; paths join with `\`) · `searchResult.ts` (indexer-label
 heuristics) · `login-response.ts` (qBittorrent login body/cookie interpretation) ·
 `haptics.ts` (global toggle + wrappers) · `tags.ts` (CSV tag parsing) ·
@@ -589,9 +628,9 @@ the label. **Never rename an existing key.**
 
 **Add a qBittorrent API call**
 Confirm the endpoint, its exact parameter names and its response shape against
-the [5.0 wiki](https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0))
+the [5.0 wiki](<https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)>)
 and, for anything that isn't 5.0-only, the
-[4.1 wiki](https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-4.1))
+[4.1 wiki](<https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-4.1)>)
 → method on the matching `services/api/*.ts` object (follow its neighbors' style)
 → request/response types in `types/api.ts` → if availability or spelling depends
 on the server version, add a flag to `ApiFeatures` in `utils/apiVersion.ts` and
@@ -685,7 +724,7 @@ rather than a translation gap.
 5. **All user-facing strings go through i18n** — `const { t } = useTranslation()`.
 6. **Prefer themed dialogs**: `InputModal` over `Alert.prompt`, `ConfirmModal`
    over `Alert.alert`. Native alerts ignore the app theme. **Don't add a new
-   one.** *Known deviations* — eight existing sites: `settings/advanced`,
+   one.** _Known deviations_ — eight existing sites: `settings/advanced`,
    `settings/torrent-defaults` ×2, `search/plugins`, `server/[id]`, `TagsModal`,
    `CategoryModal`, `SuperDebugPanel`. Converting one while you're already in
    that file is welcome, but it's never required.
