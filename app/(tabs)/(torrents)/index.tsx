@@ -60,6 +60,7 @@ import { useGracefulError } from '@/hooks/useGracefulError';
 import { getErrorMessage } from '@/utils/error';
 import { extractMagnetLink } from '@/utils/magnet';
 import { getAddTorrentDialogueVariant } from '@/utils/add-torrent-dialogue';
+import { withTorrentAddDefaults } from '@/utils/torrent-add-defaults';
 import { isTorrentCompleted } from '@/utils/torrent-state';
 import { OptionPicker, OptionPickerItem } from '@/components/OptionPicker';
 import { MultiSelectPicker, MultiSelectPickerItem } from '@/components/MultiSelectPicker';
@@ -816,10 +817,9 @@ export default function TorrentsScreen() {
       setAddingTorrent(true);
 
       const prefs = await storageService.getPreferences();
-      const addOptions = {
-        stopped: prefs.pauseOnAdd === true,
-        firstLastPiecePrio: Number(prefs.defaultPriority) > 0,
-      };
+      // Quick-add has no options UI, so the global defaults are the only thing
+      // that can set sequential / first-last here.
+      const addOptions = withTorrentAddDefaults({ stopped: prefs.pauseOnAdd === true }, prefs);
 
       const tasks: Promise<void>[] = [];
       if (selectedFiles.length > 0) {

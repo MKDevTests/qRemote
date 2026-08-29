@@ -301,6 +301,8 @@
       "sortBy": "排序方式",
       "firstLastPiecePriority": "首尾片优先",
       "firstLastPiecePriorityHint": "优先下载首尾分块",
+      "sequentialDownloadDefault": "顺序下载",
+      "sequentialDownloadDefaultHint": "为你添加的每个种子按顺序下载分块",
       "viewLogs": "查看连接日志",
       "about": "About",
       "debug": "DEBUG",

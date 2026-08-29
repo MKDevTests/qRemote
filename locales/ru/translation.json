@@ -322,6 +322,8 @@
       "sortBy": "Сортировать по",
       "firstLastPiecePriority": "Загружать сначала крайние части",
       "firstLastPiecePriorityHint": "Сначала загружать первый и последний куски",
+      "sequentialDownloadDefault": "Загружать последовательно",
+      "sequentialDownloadDefaultHint": "Загружать части по порядку для каждого добавляемого торрента",
       "viewLogs": "Журнал подключения",
       "logsTitle": "Журнал",
       "clearLogs": "Очистить",

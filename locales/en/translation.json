@@ -322,6 +322,8 @@
       "sortBy": "Sort By",
       "firstLastPiecePriority": "First/Last Piece Priority",
       "firstLastPiecePriorityHint": "Download first and last pieces first",
+      "sequentialDownloadDefault": "Sequential Download",
+      "sequentialDownloadDefaultHint": "Download pieces in order on every torrent you add",
       "viewLogs": "View Connectivity Logs",
       "logsTitle": "Logs",
       "clearLogs": "Clear",

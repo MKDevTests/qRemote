@@ -461,13 +461,26 @@ Thin objects over `apiClient`.
   allow-listed (`ServerConfig.allowInsecureCert`, synced from
   `services/server-manager.ts`); every other host and every non-server-trust
   challenge (Basic Auth, client cert) falls through to default handling
-  unchanged. iOS only; requires `npm run xcode` to pick up (new native code,
-  not just a generated-file patch).
+  unchanged. Requires `npm run xcode` to pick up (new native code, not just a
+  generated-file patch).
+
+  **Android** side added in this fork: OkHttp *does* accept a custom trust
+  manager, so instead of a category the module replaces React Native's
+  `OkHttpClientFactory` (installed from the module's `OnCreate`, before any
+  request causes a client to be cached). Same rule — real validation first, the
+  allowlist only as a fallback — scoped per host through
+  `X509ExtendedTrustManager`, the only trust-manager variant handed the socket
+  being validated.
 
 ### Build tooling (`plugins/`, `scripts/`)
 
 - **`plugins/withNativeTorrentFileCopy.js`** — iOS `withAppDelegate` mod;
   copies an incoming `.torrent` natively inside the open-URL callback.
+- **`plugins/withAndroidNetworkSecurity.js`** — writes
+  `res/xml/network_security_config.xml` and points the manifest at it:
+  cleartext HTTP (LAN qBittorrent is HTTP) and user-installed CAs (Android
+  ignores them since 7.0). **`expo.android.usesCleartextTraffic` does not exist
+  in the Expo schema** — setting it there is dropped in silence.
 - **`plugins/withAndroidBuildTweaks.js`** — Android-only mods: a `.debug`
   `applicationIdSuffix` (side-by-side installs), a release signing config
   pointing *outside* the generated tree so the signature is stable across
@@ -517,7 +530,14 @@ Origin, Content-Type, Host — #228) ·
 heuristics) · `login-response.ts` (qBittorrent login body/cookie interpretation) ·
 `haptics.ts` (global toggle + wrappers) · `tags.ts` (CSV tag parsing) ·
 `add-torrent-dialogue.ts` (compact vs full variant, plus `getSearchAddOpensDialogue`
-for the Search tab's `+` behavior — #217) · `search-cart.ts`
+for the Search tab's `+` behavior — #217) ·
+`torrent-add-defaults.ts` (`withTorrentAddDefaults` — fills the global
+sequential-download / first-last-piece defaults into any `torrents/add` options
+object; an explicit value from the caller always wins, so the add dialogue's
+switches beat the default. Must be applied at EVERY add call site: the quick-add
+modal, the full dialogue, RSS single + bulk, and the Search tab's instant add.
+`search/downloadTorrent` takes no options and is the one path it cannot reach) ·
+`search-cart.ts`
 (`groupCartItemsForAdd` — splits a `SearchCartContext` cart into one
 `torrents/add` batch per indexer when auto-tag-by-tracker is on, since that
 endpoint applies one `tags` value per request) · `server-export.ts` (strips

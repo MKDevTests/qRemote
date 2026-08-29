@@ -301,6 +301,8 @@
       "sortBy": "Ordenar por",
       "firstLastPiecePriority": "Prioridad primera/última pieza",
       "firstLastPiecePriorityHint": "Descargar primero las primeras y las últimas piezas",
+      "sequentialDownloadDefault": "Descarga secuencial",
+      "sequentialDownloadDefaultHint": "Descargar las piezas en orden en cada torrent que añadas",
       "viewLogs": "Ver registros de conectividad",
       "about": "About",
       "debug": "DEBUG",

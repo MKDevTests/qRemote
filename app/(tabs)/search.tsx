@@ -51,6 +51,7 @@ import {
   getAddTorrentDialogueVariant,
   getSearchAddOpensDialogue,
 } from '@/utils/add-torrent-dialogue';
+import { withTorrentAddDefaults } from '@/utils/torrent-add-defaults';
 import { spacing, borderRadius } from '@/constants/spacing';
 import { shadows } from '@/constants/shadows';
 import { typography } from '@/constants/typography';
@@ -544,6 +545,10 @@ export default function SearchScreen() {
         // URI — qBittorrent CORE follows that fine via torrents/add, while
         // the Python search plugins choke on the non-HTTP redirect.
         const isMagnet = result.fileUrl.trim().toLowerCase().startsWith('magnet:');
+        // NOTE: search/downloadTorrent takes no options at all, so the global
+        // sequential / first-last defaults cannot be applied on this branch —
+        // the endpoint hands the URL to the plugin and returns immediately.
+        // Only the torrents/add branch below can honor them.
         if (
           !isMagnet &&
           !isAggregatedSource &&
@@ -565,7 +570,7 @@ export default function SearchScreen() {
         } else {
           await torrentsApi.addTorrent(
             result.fileUrl,
-            trackerTag ? { tags: [trackerTag] } : undefined,
+            withTorrentAddDefaults(trackerTag ? { tags: [trackerTag] } : undefined, prefs),
           );
         }
         haptics.success();
