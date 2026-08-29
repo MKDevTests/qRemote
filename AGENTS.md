@@ -466,7 +466,8 @@ Thin objects over `apiClient`.
   before iOS's security-scoped access, or Android's per-activity `content://`
   read grant, can lapse.
 - **`updater.ts`** — Android in-app updates from GitHub releases (check the
-  latest tag, download the `.apk`, fire `ACTION_INSTALL_PACKAGE`). Reads
+  latest tag, download the `.apk` built for this device's ABI via
+  `utils/apk-asset.ts`, fire `ACTION_INSTALL_PACKAGE`). Reads
   `extra.githubRepo` from `app.config.js`. No-ops on iOS. See
   [docs/ANDROID.md](docs/ANDROID.md).
 - **`query-client.ts`** — the shared TanStack `QueryClient`.
@@ -596,6 +597,11 @@ modal, the full dialogue, RSS single + bulk, and the Search tab's instant add.
 `torrents/add` batch per indexer when auto-tag-by-tracker is on, since that
 endpoint applies one `tags` value per request) · `server-export.ts` (strips
 `password`/`basicAuthPassword`/`apiKey` on export, forces them empty on import) ·
+`apk-asset.ts` (`pickApkAsset` — which APK on a GitHub release this device
+should download, now that releases ship one per ABI. Prefers a split matching
+`Device.supportedCpuArchitectures` in device preference order, falls back to a
+universal APK (what releases up to v4.2.0 attached), and returns null rather
+than offering the wrong ABI) ·
 `save-paths.ts` (`getKnownSavePaths`, derived from live data — no API call) ·
 `file-sort.ts` (`sortTorrentFiles` — ordering for the torrent file browser.
 Not a flat `.sort()`: the browser injects a folder header the first time it

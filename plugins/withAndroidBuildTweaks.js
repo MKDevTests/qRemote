@@ -53,6 +53,18 @@ const path = require('path');
  *    A command-line `-P` beats gradle.properties, so the template's own
  *    documented escape hatch still works:
  *      ./gradlew :app:assembleRelease -PreactNativeArchitectures=x86_64
+ *
+ * 4. **One APK per ABI**, via `splits { abi }`. Narrowing to two ABIs above
+ *    still leaves both of them inside a single 59 MB file, and a device can
+ *    only ever run one. Splitting gives two ~35 MB APKs, which is the whole
+ *    download an in-app update costs the user. The universal APK is switched
+ *    off: nothing consumes it — the release workflow attaches both splits and
+ *    services/updater.ts picks by `Device.supportedCpuArchitectures`.
+ *
+ *    versionCode is deliberately NOT offset per ABI. That trick exists for
+ *    the Play Store, which needs every uploaded artifact to have a distinct
+ *    code; releases here are GitHub assets picked by filename, and a device
+ *    can only install the split matching its own CPU anyway.
  */
 
 /** The ABIs any real Android phone actually uses. */
@@ -106,6 +118,25 @@ const SIGNING_CONFIG = `
 /** Anchor: the last line of the template's `signingConfigs { debug { … } }`. */
 const SIGNING_ANCHOR = `            keyPassword 'android'
         }
+`;
+
+/** Anchor: the start of the block that follows defaultConfig. */
+const SPLITS_ANCHOR = `    signingConfigs {
+`;
+
+const SPLITS_CONFIG = `    // One APK per ABI rather than one file carrying both — see the plugin
+    // doc comment. reactNativeArchitectures stays the source of truth for
+    // which ABIs are built at all; this only decides that they ship apart, so
+    // the template's -PreactNativeArchitectures escape hatch keeps working.
+    splits {
+        abi {
+            enable true
+            reset()
+            include((project.findProperty('reactNativeArchitectures') ?: '@@ABIS@@').split(','))
+            universalApk false
+        }
+    }
+
 `;
 
 const DEBUG_BUILD_TYPE = `        debug {
@@ -193,6 +224,12 @@ function withBuildGradleTweaks(config) {
       DEBUG_BUILD_TYPE,
       DEBUG_BUILD_TYPE_PATCHED,
       'debug build type',
+    );
+    contents = replaceOnce(
+      contents,
+      SPLITS_ANCHOR,
+      SPLITS_CONFIG.replace('@@ABIS@@', ANDROID_ARCHITECTURES) + SPLITS_ANCHOR,
+      'abi splits',
     );
     cfg.modResults.contents = contents;
     return cfg;

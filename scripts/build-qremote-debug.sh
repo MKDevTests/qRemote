@@ -64,8 +64,24 @@ echo "==> Building debug APK"
 ./gradlew :app:assembleDebug -Dorg.gradle.jvmargs="$JVM_ARGS" --build-cache
 
 cd "$REPO_ROOT"
-APK="android/app/build/outputs/apk/debug/app-debug.apk"
-[[ -f "$APK" ]] || { echo "APK not found at $APK" >&2; exit 1; }
+# The abi split applies to every variant, so debug builds land as
+# app-<abi>-debug.apk. Install the one this device can run.
+DEBUG_APKS=()
+while IFS= read -r line; do DEBUG_APKS+=("$line"); done < <(
+    ls -1 android/app/build/outputs/apk/debug/*debug.apk 2>/dev/null
+)
+if (( ${#DEBUG_APKS[@]} == 0 )); then
+    echo "No APK found in android/app/build/outputs/apk/debug" >&2
+    exit 1
+fi
+
+APK="${DEBUG_APKS[0]}"
+if (( ${#DEBUG_APKS[@]} > 1 )) && ADB="$(resolve_adb)"; then
+    ABI="$("$ADB" shell getprop ro.product.cpu.abi 2>/dev/null | tr -d "\r\n")"
+    for candidate in "${DEBUG_APKS[@]}"; do
+        [[ -n "$ABI" && "$candidate" == *"-$ABI-"* ]] && { APK="$candidate"; break; }
+    done
+fi
 
 echo "==> APK ready: $APK ($(du -h "$APK" | cut -f1))"
 

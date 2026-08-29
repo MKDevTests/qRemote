@@ -138,9 +138,15 @@ BUILD_RC=$?
 set -e
 trap 'rollback "Script failed"' ERR
 
-BUILT_APK="android/app/build/outputs/apk/release/app-release.apk"
-if [[ ! -f "$BUILT_APK" ]]; then
-    echo "ERROR: no signed APK at $BUILT_APK (build exit=$BUILD_RC)" >&2
+# One APK per ABI since v4.2.1 (plugins/withAndroidBuildTweaks.js): all of them
+# are attached to the release, and services/updater.ts picks the right one on
+# the device from Device.supportedCpuArchitectures.
+BUILT_APKS=()
+while IFS= read -r line; do BUILT_APKS+=("$line"); done < <(
+    ls -1 android/app/build/outputs/apk/release/*-release.apk 2>/dev/null
+)
+if (( ${#BUILT_APKS[@]} < 2 )); then
+    echo "ERROR: expected one signed APK per ABI, found ${#BUILT_APKS[@]} (build exit=$BUILD_RC)" >&2
     exit 1
 fi
 
@@ -148,9 +154,18 @@ fi
 # checks them against package.json — which this script just wrote. Re-checking
 # here against $VERSION directly is the belt to that braces: it catches the case
 # where the build silently reused an earlier APK.
-RELEASE_APK="android/app/build/outputs/apk/release/qremote-$VERSION.apk"
-cp "$BUILT_APK" "$RELEASE_APK"
-echo "==> Release APK: $RELEASE_APK ($(du -h "$RELEASE_APK" | cut -f1))"
+RELEASE_APKS=()
+for built in "${BUILT_APKS[@]}"; do
+    abi="$(basename "$built" | sed -nE 's/^app-(.+)-release\.apk$/\1/p')"
+    if [[ -z "$abi" ]]; then
+        echo "ERROR: no ABI in $(basename "$built") — is the abi split still configured?" >&2
+        exit 1
+    fi
+    named="android/app/build/outputs/apk/release/qremote-$VERSION-$abi.apk"
+    cp "$built" "$named"
+    RELEASE_APKS+=("$named")
+    echo "==> Release APK: $named ($(du -h "$named" | cut -f1))"
+done
 
 if [[ $DRY_RUN == 1 ]]; then
     echo ""
@@ -176,12 +191,13 @@ trap - ERR
 
 # ----- GitHub release -----
 echo "==> Creating the GitHub release on $REPO_SLUG"
-GH_ARGS=(
-    release create "$TAG"
-    "$(to_native_path "$(realpath "$RELEASE_APK")")"
-    --repo "$REPO_SLUG"
-    --title "qRemote $TAG"
-)
+# to_native_path takes one path at a time, so the APKs go in one by one
+# rather than through a single expansion.
+GH_ARGS=(release create "$TAG")
+for apk in "${RELEASE_APKS[@]}"; do
+    GH_ARGS+=("$(to_native_path "$(realpath "$apk")")")
+done
+GH_ARGS+=(--repo "$REPO_SLUG" --title "qRemote $TAG")
 if [[ -n "$NOTES_ARG" ]]; then
     if [[ -f "$NOTES_ARG" ]]; then
         GH_ARGS+=(--notes-file "$(to_native_path "$(realpath "$NOTES_ARG")")")
@@ -194,9 +210,13 @@ fi
 # release under it, and the app is then right to report no update available.
 if ! gh "${GH_ARGS[@]}"; then
     echo "" >&2
+    APKS=""
+    for apk in "${RELEASE_APKS[@]}"; do
+        APKS="$APKS '$(to_native_path "$(realpath "$apk")")'"
+    done
     echo "ERROR: the release was not created, but $TAG is already pushed." >&2
     echo "  Nothing is lost — retry just the last step:" >&2
-    echo "    gh release create $TAG '$(to_native_path "$(realpath "$RELEASE_APK")")' \\" >&2
+    echo "    gh release create $TAG $APKS \\" >&2
     echo "      --repo $REPO_SLUG --title 'qRemote $TAG'" >&2
     exit 1
 fi
