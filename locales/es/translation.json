@@ -628,6 +628,21 @@
       "ruleSavedToast": "Regla guardada",
       "ruleDeletedToast": "Regla eliminada",
       "ruleRenamedToast": "Regla renombrada"
+    },
+    "magnetBasket": {
+      "title": "Cesta de magnets",
+      "collectMode": "Recoger magnets",
+      "collectModeHintSilent": "Los enlaces magnet van directos a la cesta sin abrir qRemote",
+      "collectModeHintForeground": "Los enlaces magnet van a la cesta en vez de a la pantalla de añadir",
+      "emptyTitle": "Cesta vacía",
+      "emptyMessage": "Activa la recogida y toca enlaces magnet donde quieras. Aparecerán aquí.",
+      "unnamed": "Magnet sin nombre",
+      "addAll": "Añadir {{count}}",
+      "clearAll": "Vaciar cesta",
+      "clearConfirmTitle": "¿Vaciar la cesta?",
+      "clearConfirmMessage": "Se descartarán {{count}} enlaces recogidos.",
+      "collectedToast": "Recogido: {{count}} en la cesta",
+      "duplicateToast": "Ya está en la cesta"
     }
   },
   "placeholders": {

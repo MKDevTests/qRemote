@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The collect activity runs with no React context, so it cannot reach the app's
+  i18n bundle (locales/*/translation.json). These are the only two strings in
+  the app that have to be duplicated in Android resources; translations live in
+  values-<lang>/strings.xml beside this file, and Android picks by device
+  locale on its own.
+-->
+<resources>
+    <string name="magnet_already_collected">Already in the magnet basket</string>
+    <plurals name="magnet_collected">
+        <item quantity="one">%d magnet in the basket</item>
+        <item quantity="other">%d magnets in the basket</item>
+    </plurals>
+</resources>

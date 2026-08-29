@@ -61,6 +61,7 @@ import { getErrorMessage } from '@/utils/error';
 import { extractMagnetLink } from '@/utils/magnet';
 import { getAddTorrentDialogueVariant } from '@/utils/add-torrent-dialogue';
 import { withTorrentAddDefaults } from '@/utils/torrent-add-defaults';
+import { useMagnetBasket } from '@/context/MagnetBasketContext';
 import { isDownloadingState, isTorrentCompleted, isUploadingState } from '@/utils/torrent-state';
 import { OptionPicker, OptionPickerItem } from '@/components/OptionPicker';
 import { MultiSelectPicker, MultiSelectPickerItem } from '@/components/MultiSelectPicker';
@@ -70,6 +71,7 @@ export default function TorrentsScreen() {
   const { t } = useTranslation();
   const { showToast, setToastTopOffset } = useToast();
   const router = useRouter();
+  const magnetBasket = useMagnetBasket();
   const {
     torrents,
     categories,
@@ -1244,7 +1246,40 @@ export default function TorrentsScreen() {
                 )}
               </View>
 
-              {/* RIGHT: Add torrent button — fixed 42×42 */}
+              {/* RIGHT: magnet basket, then add torrent — both fixed 42×42 */}
+              {!selectMode && (
+                <TouchableOpacity
+                  style={[
+                    styles.headerAddButton,
+                    {
+                      // Filled while collecting so the mode is visible at a
+                      // glance: it changes what tapping a magnet anywhere on
+                      // the phone does, which is not something to leave the
+                      // user guessing about.
+                      backgroundColor: magnetBasket.collectMode ? colors.primary : colors.surface,
+                      borderWidth: magnetBasket.collectMode ? 0 : StyleSheet.hairlineWidth,
+                      borderColor: colors.surfaceOutline,
+                    },
+                  ]}
+                  onPress={() => router.push('/magnet-basket')}
+                  activeOpacity={0.7}
+                  accessibilityLabel={t('screens.magnetBasket.title')}
+                >
+                  <Ionicons
+                    name={magnetBasket.collectMode ? 'magnet' : 'magnet-outline'}
+                    size={20}
+                    color={magnetBasket.collectMode ? '#FFFFFF' : colors.textSecondary}
+                  />
+                  {magnetBasket.items.length > 0 && (
+                    <View style={[styles.headerBadge, { backgroundColor: colors.error }]}>
+                      <Text style={styles.headerBadgeText}>
+                        {magnetBasket.items.length > 99 ? '99+' : magnetBasket.items.length}
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              )}
+
               {!selectMode && (
                 <TouchableOpacity
                   style={[styles.headerAddButton, { backgroundColor: colors.primary }]}
@@ -2503,6 +2538,22 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.medium,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  headerBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
   },
   swipeActionsRight: {
     flexDirection: 'row',

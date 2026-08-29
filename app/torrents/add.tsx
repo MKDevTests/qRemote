@@ -38,6 +38,7 @@ import { shadows } from '@/constants/shadows';
 import { typography } from '@/constants/typography';
 import { extractMagnetLink } from '@/utils/magnet';
 import { groupCartItemsForAdd } from '@/utils/search-cart';
+import { useMagnetBasket } from '@/context/MagnetBasketContext';
 import { getTorrentAddDefaults, TorrentAddDefaults } from '@/utils/torrent-add-defaults';
 
 type AddTorrentOptions = Parameters<typeof torrentsApi.addTorrent>[1];
@@ -52,12 +53,14 @@ export default function AddTorrentFullScreen() {
   const { isConnected } = useServer();
   const { categories, tags } = useTorrents();
   const cart = useSearchCart();
+  const basket = useMagnetBasket();
   const params = useLocalSearchParams<{
     magnet?: string | string[];
     torrentFileUri?: string | string[];
     torrentFileName?: string | string[];
     sourceUrl?: string | string[];
     fromCart?: string | string[];
+    fromBasket?: string | string[];
   }>();
   const lastAppliedMagnetRef = useRef<{ value: string; at: number } | null>(null);
   const lastAppliedTorrentFileRef = useRef<{ value: string; at: number } | null>(null);
@@ -71,6 +74,13 @@ export default function AddTorrentFullScreen() {
   // ternary would otherwise be a new array every render, defeating the
   // useCallback below it's a dependency of).
   const fromCart = (Array.isArray(params.fromCart) ? params.fromCart[0] : params.fromCart) === '1';
+
+  // Magnet basket checkout. Unlike the Search cart, the basket needs no
+  // special submit path: its entries are plain magnet URIs, and this screen's
+  // textarea already accepts one URL per line. So it prefills and then behaves
+  // exactly like a hand-typed multi-line add.
+  const fromBasket =
+    (Array.isArray(params.fromBasket) ? params.fromBasket[0] : params.fromBasket) === '1';
   const cartItems = useMemo(() => (fromCart ? cart.items : []), [fromCart, cart.items]);
 
   const [fieldVisibility, setFieldVisibility] = useState<Record<AddTorrentDialogField, boolean>>(
@@ -359,6 +369,9 @@ export default function AddTorrentFullScreen() {
         'success',
       );
       if (cartItems.length > 0) cart.clear();
+      // Only on success: a failed add must leave the basket intact, or the
+      // user loses links they spent a session collecting.
+      if (fromBasket) basket.clear();
       router.back();
     } catch {
       showToast(t('errors.failedToAdd'), 'error');
@@ -366,10 +379,12 @@ export default function AddTorrentFullScreen() {
       setAdding(false);
     }
   }, [
+    basket,
     buildOptions,
     cart,
     cartItems,
     fieldVisibility.source,
+    fromBasket,
     isConnected,
     router,
     selectedFiles,
@@ -403,6 +418,18 @@ export default function AddTorrentFullScreen() {
     lastAppliedMagnetRef.current = { value: magnetLink, at: now };
     setTorrentUrl(magnetLink);
   }, [params.magnet]);
+
+  // Prefill from the basket exactly once per visit. Reading `urls()` rather
+  // than subscribing to `items` keeps a magnet collected while this screen is
+  // open from rewriting a textarea the user may already have edited.
+  const basketPrefilledRef = useRef(false);
+  useEffect(() => {
+    if (!fromBasket || basketPrefilledRef.current) return;
+    const urls = basket.urls();
+    if (urls.length === 0) return;
+    basketPrefilledRef.current = true;
+    setTorrentUrl(urls.join('\n'));
+  }, [fromBasket, basket]);
 
   // Search tab's + button (#217), full-dialogue branch. Assigned verbatim —
   // NOT run through extractMagnetLink, which returns null for a plain

@@ -23,6 +23,7 @@ import { TransferProvider } from '@/context/TransferContext';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 import { ToastProvider, useToast } from '@/context/ToastContext';
 import { SearchCartProvider } from '@/context/SearchCartContext';
+import { MagnetBasketProvider, useMagnetBasket } from '@/context/MagnetBasketContext';
 import { logStorage } from '@/services/log-storage';
 import { storageService } from '@/services/storage';
 import { apiClient } from '@/services/api/client';
@@ -144,6 +145,16 @@ function StackNavigator() {
   // eslint-disable-next-line react-hooks/refs
   rootNavReadyRef.current = !!rootNavigationState?.key;
 
+  // The basket is read from inside the Linking subscription below, which must
+  // NOT be re-registered every time the mode is toggled or an item is added.
+  // Mirrored through a ref for the same reason rootNavReadyRef is, and
+  // assigned during render so a deep link arriving in the same commit sees the
+  // current mode rather than the previous one.
+  const magnetBasket = useMagnetBasket();
+  const magnetBasketRef = useRef(magnetBasket);
+  // eslint-disable-next-line react-hooks/refs
+  magnetBasketRef.current = magnetBasket;
+
   useEffect(() => {
     const navigateToMagnet = (magnetLink: string) => {
       InteractionManager.runAfterInteractions(() => {
@@ -178,6 +189,25 @@ function StackNavigator() {
           return true;
         }
         lastHandledMagnetRef.current = { value: magnetLink, at: now };
+
+        // Collect mode: park it and go no further — no navigation, no add
+        // screen. On Android with the native collector enabled this branch is
+        // usually not even reached, because the invisible activity took the
+        // link before the app was involved; it still runs for links that
+        // arrive through the app itself (a share sheet, a pasted URL), and it
+        // is the ONLY collect path on iOS, where a URL scheme always
+        // foregrounds the app.
+        const basket = magnetBasketRef.current;
+        if (basket.collectMode) {
+          const added = basket.add(magnetLink);
+          showToast(
+            added
+              ? t('screens.magnetBasket.collectedToast', { count: basket.items.length + 1 })
+              : t('screens.magnetBasket.duplicateToast'),
+            added ? 'success' : 'info',
+          );
+          return true;
+        }
 
         if (!rootNavReadyRef.current) {
           pendingDeepLinkRef.current = { type: 'magnet', value: magnetLink };
@@ -353,7 +383,9 @@ export default function RootLayout() {
                   <TorrentProvider>
                     <TransferProvider>
                       <SearchCartProvider>
-                        <StackNavigator />
+                        <MagnetBasketProvider>
+                          <StackNavigator />
+                        </MagnetBasketProvider>
                       </SearchCartProvider>
                     </TransferProvider>
                   </TorrentProvider>

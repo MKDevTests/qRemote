@@ -628,6 +628,21 @@
       "ruleSavedToast": "Règle enregistrée",
       "ruleDeletedToast": "Règle supprimée",
       "ruleRenamedToast": "Règle renommée"
+    },
+    "magnetBasket": {
+      "title": "Panier magnet",
+      "collectMode": "Collecter les magnets",
+      "collectModeHintSilent": "Les liens magnet vont droit au panier sans ouvrir qRemote",
+      "collectModeHintForeground": "Les liens magnet vont au panier au lieu de l'écran d'ajout",
+      "emptyTitle": "Panier vide",
+      "emptyMessage": "Active la collecte, puis touche des liens magnet où tu veux. Ils arrivent ici.",
+      "unnamed": "Magnet sans nom",
+      "addAll": "Ajouter {{count}}",
+      "clearAll": "Vider le panier",
+      "clearConfirmTitle": "Vider le panier ?",
+      "clearConfirmMessage": "{{count}} liens collectés seront abandonnés.",
+      "collectedToast": "Collecté — {{count}} dans le panier",
+      "duplicateToast": "Déjà dans le panier"
     }
   },
   "placeholders": {

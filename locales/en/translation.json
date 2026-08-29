@@ -649,6 +649,21 @@
       "ruleSavedToast": "Rule saved",
       "ruleDeletedToast": "Rule deleted",
       "ruleRenamedToast": "Rule renamed"
+    },
+    "magnetBasket": {
+      "title": "Magnet Basket",
+      "collectMode": "Collect magnets",
+      "collectModeHintSilent": "Magnet links go straight to the basket without opening qRemote",
+      "collectModeHintForeground": "Magnet links go to the basket instead of the add screen",
+      "emptyTitle": "Basket is empty",
+      "emptyMessage": "Turn on collect mode, then tap magnet links anywhere. They land here.",
+      "unnamed": "Unnamed magnet",
+      "addAll": "Add {{count}}",
+      "clearAll": "Empty basket",
+      "clearConfirmTitle": "Empty the basket?",
+      "clearConfirmMessage": "{{count}} collected links will be discarded.",
+      "collectedToast": "Collected — {{count}} in the basket",
+      "duplicateToast": "Already in the basket"
     }
   },
   "placeholders": {

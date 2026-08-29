@@ -1,0 +1,17 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'io.github.mkdevtests.magnetcollector'
+version = '1.0.0'
+
+android {
+  namespace 'io.github.mkdevtests.magnetcollector'
+  // expo-module-gradle-plugin reads both back and fails configuration with
+  // "'android.defaultConfig.versionName' is not defined" if they are absent.
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+  }
+}

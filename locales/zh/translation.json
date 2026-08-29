@@ -628,6 +628,21 @@
       "ruleSavedToast": "规则已保存",
       "ruleDeletedToast": "规则已删除",
       "ruleRenamedToast": "规则已重命名"
+    },
+    "magnetBasket": {
+      "title": "磁力篮",
+      "collectMode": "收集磁力链接",
+      "collectModeHintSilent": "磁力链接直接进入篮子，不会打开 qRemote",
+      "collectModeHintForeground": "磁力链接进入篮子，而不是添加界面",
+      "emptyTitle": "篮子是空的",
+      "emptyMessage": "打开收集模式，然后在任意位置点击磁力链接，它们会出现在这里。",
+      "unnamed": "未命名磁力链接",
+      "addAll": "添加 {{count}} 个",
+      "clearAll": "清空篮子",
+      "clearConfirmTitle": "清空篮子？",
+      "clearConfirmMessage": "将丢弃已收集的 {{count}} 个链接。",
+      "collectedToast": "已收集 — 篮中 {{count}} 个",
+      "duplicateToast": "已在篮中"
     }
   },
   "placeholders": {
