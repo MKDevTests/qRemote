@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="magnet_already_collected">已在磁力篮中</string>
+    <plurals name="magnet_collected">
+        <item quantity="other">篮中 %d 个磁力链接</item>
+    </plurals>
+</resources>

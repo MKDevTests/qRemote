@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="magnet_already_collected">Déjà dans le panier magnet</string>
+    <plurals name="magnet_collected">
+        <item quantity="one">%d magnet dans le panier</item>
+        <item quantity="other">%d magnets dans le panier</item>
+    </plurals>
+</resources>
