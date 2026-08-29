@@ -295,6 +295,10 @@
       "noTagsHint": "Add tags to label and filter your torrents",
       "notificationDuration": "Notification Duration",
       "hapticFeedback": "Haptic Feedback",
+      "notifyOnComplete": "Notify when a download finishes",
+      "notifyOnCompleteHint": "While the app is closed, Android checks about every 15 minutes",
+      "notifyChannelName": "Downloads",
+      "notifyPermissionDenied": "Notifications are blocked for qRemote in Android settings",
       "autoConnectLastServer": "Auto-connect to Last Server",
       "exportServers": "Export Servers",
       "exportServersHint": "Share your server list as a file — passwords and API keys are never included",
@@ -1120,7 +1124,10 @@
     "ulLimitSetKb": "Upload limit set to {{value}} KiB/s",
     "fileRenamed": "File renamed",
     "folderRenamed": "Folder renamed",
-    "exportTorrentFailed": "Could not export the .torrent file"
+    "exportTorrentFailed": "Could not export the .torrent file",
+    "downloadComplete": "Download complete",
+    "downloadsComplete": "{{total}} downloads complete",
+    "downloadsCompleteBody": "{{name}} and {{others}} more"
   },
   "errors": {
     "generic": "An error occurred",

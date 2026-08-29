@@ -295,6 +295,10 @@
       "noTagsHint": "Добавьте теги для меток и фильтрации",
       "notificationDuration": "Длительность уведомлений",
       "hapticFeedback": "Тактильный отклик",
+      "notifyOnComplete": "Уведомлять о завершении загрузки",
+      "notifyOnCompleteHint": "При закрытом приложении Android проверяет примерно раз в 15 минут",
+      "notifyChannelName": "Загрузки",
+      "notifyPermissionDenied": "Уведомления для qRemote запрещены в настройках Android",
       "autoConnectLastServer": "Автоподключение к последнему серверу",
       "exportServers": "Экспорт серверов",
       "exportServersHint": "Поделитесь списком серверов в виде файла — пароли и API-ключи никогда не включаются",
@@ -1120,7 +1124,10 @@
     "fileSelected": "Выбран файл: {{name}}",
     "fileRenamed": "Файл переименован",
     "folderRenamed": "Папка переименована",
-    "exportTorrentFailed": "Не удалось экспортировать файл .torrent"
+    "exportTorrentFailed": "Не удалось экспортировать файл .torrent",
+    "downloadComplete": "Загрузка завершена",
+    "downloadsComplete": "Загрузок завершено: {{total}}",
+    "downloadsCompleteBody": "{{name}} и ещё {{others}}"
   },
   "errors": {
     "generic": "Произошла ошибка",

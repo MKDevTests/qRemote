@@ -116,6 +116,10 @@ module.exports = {
         // through PackageInstaller; without this the install intent is
         // rejected before the system dialog ever appears.
         'android.permission.REQUEST_INSTALL_PACKAGES',
+        // Download-finished notifications (services/completion-notifications.ts).
+        // Android 13+ refuses to post anything without it, and the runtime
+        // prompt only appears if it is declared here.
+        'android.permission.POST_NOTIFICATIONS',
       ],
       // Pulled in transitively and never used by this app: expo-dev-client
       // adds SYSTEM_ALERT_WINDOW for its debug overlay, and
@@ -184,6 +188,13 @@ module.exports = {
       // Must come after the intentFilters above are applied: it moves the
       // magnet scheme out of MainActivity's generated filter.
       './plugins/withMagnetCollector',
+      // Download-finished notifications: the channel and the POST_NOTIFICATIONS
+      // runtime prompt come from expo-notifications, the 15-minute WorkManager
+      // check from expo-background-task (which needs expo-task-manager to
+      // define the task).
+      'expo-notifications',
+      'expo-task-manager',
+      'expo-background-task',
     ],
     extra: {
       router: {},

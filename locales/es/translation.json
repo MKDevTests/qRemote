@@ -274,6 +274,10 @@
       "noTagsHint": "Añade etiquetas para filtrar torrents",
       "notificationDuration": "Duración de notificaciones",
       "hapticFeedback": "Retroalimentación háptica",
+      "notifyOnComplete": "Avisar cuando termine una descarga",
+      "notifyOnCompleteHint": "Con la app cerrada, Android comprueba cada 15 minutos aproximadamente",
+      "notifyChannelName": "Descargas",
+      "notifyPermissionDenied": "Las notificaciones están bloqueadas para qRemote en los ajustes de Android",
       "autoConnectLastServer": "Conectar automáticamente al último servidor",
       "exportServers": "Exportar servidores",
       "exportServersHint": "Comparte tu lista de servidores como archivo: las contraseñas y claves API nunca se incluyen",
@@ -1099,7 +1103,10 @@
     "connectionFailedCheck": "Error de conexión. Comprueba tu configuración e intenta conectar manualmente.",
     "fileRenamed": "Archivo renombrado",
     "folderRenamed": "Carpeta renombrada",
-    "exportTorrentFailed": "No se pudo exportar el archivo .torrent"
+    "exportTorrentFailed": "No se pudo exportar el archivo .torrent",
+    "downloadComplete": "Descarga completada",
+    "downloadsComplete": "{{total}} descargas completadas",
+    "downloadsCompleteBody": "{{name}} y {{others}} más"
   },
   "errors": {
     "generic": "Ocurrió un error",

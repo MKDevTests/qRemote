@@ -479,6 +479,17 @@ Thin objects over `apiClient`.
   `utils/apk-asset.ts`, fire `ACTION_INSTALL_PACKAGE`). Reads
   `extra.githubRepo` from `app.config.js`. No-ops on iOS. See
   [docs/ANDROID.md](docs/ANDROID.md).
+- **`completion-notifications.ts`** — posts the "download finished" system
+  notification (Android only). Owns the permission request, the channel, the
+  stored snapshot, and a module-level enabled flag mirroring the
+  `notifyOnComplete` preference — the same pattern as `utils/haptics.ts`,
+  because the 2s foreground poll must not hit AsyncStorage each time and the
+  background task has no React to read a context from.
+- **`completion-task.ts`** — the background half. `TaskManager.defineTask` runs
+  at module scope (Android can start the app headless purely to run it), so
+  **import this module for its side effect** — app/_layout.tsx does.
+  `syncCompletionTask(enabled)` registers/unregisters the WorkManager job.
+  15 minutes is WorkManager's floor, not a choice.
 - **`query-client.ts`** — the shared TanStack `QueryClient`.
 - **`color-theme-manager.ts`** — save/load/apply user color themes.
 - **`connectivity-log.ts`** — in-memory ring log (`clogDebug/Info/Warn/Error(tag, msg)`).
@@ -559,6 +570,10 @@ Thin objects over `apiClient`.
   `ConfirmModal`.
 - `useReactiveReconnect.ts` — feeds query errors into ServerContext reconnect
   (`isReconnectableError`).
+- `useCompletionNotifications.ts` — the foreground half of completion
+  notifications, called from TorrentProvider. Shares one snapshot with the
+  background task, so whichever sees a torrent finish first is the only one
+  that reports it.
 - `useGracefulError.ts` — suppresses a transient error until it has persisted
   ~2.5s, so a self-healing poll failure doesn't flash error UI.
 - `useRssFeeds.ts` / `useRssRules.ts` — RSS tree and auto-download rule state.
@@ -615,6 +630,10 @@ than offering the wrong ABI) ·
 expo-file-system writes binary as base64 text) ·
 `search-history.ts` (recent search terms: add/remove/parse, deduped
 case-insensitively, capped) ·
+`completion-watch.ts` (which torrents finished since the last check. The rule
+the module exists for: **a torrent seen for the first time is never reported**,
+or enabling notifications on a client holding 300 finished torrents fires 300
+of them) ·
 `preference-migrations.ts` (`migratePreferences` — the schema-versioned
 migration chain for the preferences blob; append-only, a throwing step is
 skipped rather than taking the store down) ·

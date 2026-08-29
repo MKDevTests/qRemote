@@ -28,6 +28,10 @@ import { logStorage } from '@/services/log-storage';
 import { storageService } from '@/services/storage';
 import { apiClient } from '@/services/api/client';
 import { setHapticsEnabled } from '@/utils/haptics';
+import { setCompletionNotificationsEnabled } from '@/services/completion-notifications';
+// Imported for its side effect: TaskManager.defineTask must run before React
+// mounts, because Android can start the app headless just to run the task.
+import { syncCompletionTask } from '@/services/completion-task';
 import {
   setDebugMode as setConnectivityDebugMode,
   clogInfo,
@@ -361,6 +365,12 @@ export default function RootLayout() {
       .getPreferences()
       .then((prefs) => {
         setHapticsEnabled(prefs.hapticFeedback !== false);
+        const notify = prefs.notifyOnComplete === true;
+        setCompletionNotificationsEnabled(notify);
+        // Keeps registration honest after an uninstall/reinstall or an OS
+        // that dropped the task, and unregisters it if the pref was turned
+        // off while the app was closed.
+        void syncCompletionTask(notify);
         setConnectivityDebugMode(prefs.debugMode === true);
         apiClient.updateSettings({
           connectionTimeout: Number(prefs.connectionTimeout) || 10000,

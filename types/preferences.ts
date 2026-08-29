@@ -150,6 +150,16 @@ export interface AppPreferences {
   /** Whether haptic feedback is enabled */
   hapticFeedback: boolean;
 
+  /**
+   * Post a system notification when a download finishes (Android only).
+   *
+   * Defaults to false because turning it on needs the POST_NOTIFICATIONS
+   * permission, and a preference that is on by default but silently blocked is
+   * worse than one the user switched on themselves. See
+   * services/completion-notifications.ts for what it can honestly promise.
+   */
+  notifyOnComplete: boolean;
+
   /** Auto-connect to the last used server on app launch */
   autoConnectLastServer: boolean;
 
@@ -237,6 +247,7 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
   magnetBasketMode: false,
   toastDuration: 3000,
   hapticFeedback: true,
+  notifyOnComplete: false,
   autoConnectLastServer: true,
   connectionTimeout: 10000,
   apiTimeout: 30000,

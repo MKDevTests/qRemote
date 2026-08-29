@@ -274,6 +274,10 @@
       "noTagsHint": "添加标签来筛选种子",
       "notificationDuration": "通知时长",
       "hapticFeedback": "触觉反馈",
+      "notifyOnComplete": "下载完成时通知我",
+      "notifyOnCompleteHint": "应用关闭时，Android 大约每 15 分钟检查一次",
+      "notifyChannelName": "下载",
+      "notifyPermissionDenied": "已在 Android 设置中禁止 qRemote 发送通知",
       "autoConnectLastServer": "自动连接上次服务器",
       "exportServers": "导出服务器",
       "exportServersHint": "将服务器列表导出为文件——绝不包含密码和 API 密钥",
@@ -1099,7 +1103,10 @@
     "connectionFailedCheck": "连接失败，请检查你的设置并尝试手动连接。",
     "fileRenamed": "文件已重命名",
     "folderRenamed": "文件夹已重命名",
-    "exportTorrentFailed": "无法导出 .torrent 文件"
+    "exportTorrentFailed": "无法导出 .torrent 文件",
+    "downloadComplete": "下载完成",
+    "downloadsComplete": "{{total}} 项下载完成",
+    "downloadsCompleteBody": "{{name}} 等 {{others}} 项"
   },
   "errors": {
     "generic": "发生错误",
