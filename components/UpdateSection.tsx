@@ -4,7 +4,7 @@
  * Renders nothing at all on iOS, where the App Store owns updates and
  * sideloading is impossible. See services/updater.ts for the mechanism.
  */
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -27,6 +27,7 @@ import {
   updatesSupported,
 } from '@/services/updater';
 import { APP_VERSION } from '@/utils/version';
+import { formatReleaseNotes } from '@/utils/release-notes';
 import { spacing, borderRadius } from '@/constants/spacing';
 import { shadows } from '@/constants/shadows';
 import { typography } from '@/constants/typography';
@@ -126,6 +127,11 @@ export function UpdateSection() {
     [showToast, t],
   );
 
+  // Flattened once per phase change rather than per render: the card
+  // re-renders on every download progress tick.
+  const rawNotes = phase.kind === 'idle' || phase.kind === 'checking' ? null : phase.update.notes;
+  const notes = useMemo(() => formatReleaseNotes(rawNotes), [rawNotes]);
+
   if (!updatesSupported()) return null;
 
   const url = releasesUrl();
@@ -179,11 +185,9 @@ export function UpdateSection() {
               </View>
             </View>
 
-            {!!phase.update.notes && (
+            {!!notes && (
               <ScrollView style={styles.notes} nestedScrollEnabled>
-                <Text style={[styles.notesText, { color: colors.textSecondary }]}>
-                  {phase.update.notes}
-                </Text>
+                <Text style={[styles.notesText, { color: colors.textSecondary }]}>{notes}</Text>
               </ScrollView>
             )}
 

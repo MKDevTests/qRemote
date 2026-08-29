@@ -578,6 +578,10 @@ carries different trackers and `dn` but identical content. `parseStoredBasket`
 drops malformed entries rather than failing the whole basket) · `rss.ts`
 (RSS tree flattening; paths join with `\`) · `searchResult.ts` (indexer-label
 heuristics) · `login-response.ts` (qBittorrent login body/cookie interpretation) ·
+`release-notes.ts` (`formatReleaseNotes` — flattens a GitHub release body to
+plain text for the updater card: headings and bullets survive, inline Markdown,
+the generated "by @user in <url>" attribution and the Full Changelog footer do
+not. Not a Markdown renderer, and deliberately lookbehind-free — Hermes) ·
 `haptics.ts` (global toggle + wrappers) · `tags.ts` (CSV tag parsing) ·
 `add-torrent-dialogue.ts` (compact vs full variant, plus `getSearchAddOpensDialogue`
 for the Search tab's `+` behavior — #217) ·
