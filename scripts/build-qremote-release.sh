@@ -40,16 +40,28 @@ for arg in "$@"; do
     esac
 done
 
+# Report which key the build will actually use, in the same order Gradle
+# resolves it (see plugins/withAndroidBuildTweaks.js). Getting this wrong is
+# silent and expensive: an APK signed with an unexpected key installs nowhere.
+GRADLE_PROPS="$HOME/.gradle/gradle.properties"
+PROP_KEYSTORE=""
+if [[ -f "$GRADLE_PROPS" ]]; then
+    PROP_KEYSTORE="$(sed -nE 's/^[[:space:]]*QREMOTE_RELEASE_KEYSTORE[[:space:]]*=[[:space:]]*(.*[^[:space:]])[[:space:]]*$//p' "$GRADLE_PROPS" | tail -n 1)"
+fi
+
 if [[ -n "${QREMOTE_RELEASE_KEYSTORE:-}" ]]; then
     [[ -f "$QREMOTE_RELEASE_KEYSTORE" ]] || {
         echo "ERROR: QREMOTE_RELEASE_KEYSTORE points at a missing file: $QREMOTE_RELEASE_KEYSTORE" >&2
         exit 1
     }
     echo "==> Signing key: $QREMOTE_RELEASE_KEYSTORE (from env)"
+elif [[ -n "$PROP_KEYSTORE" ]]; then
+    echo "==> Signing key: $PROP_KEYSTORE (from ~/.gradle/gradle.properties)"
 elif [[ -f "$HOME/.android/debug.keystore" ]]; then
     echo "==> Signing key: ~/.android/debug.keystore (stable, seamless updates)"
 else
-    echo "WARN: ~/.android/debug.keystore does not exist yet."
+    echo "WARN: no release key configured, and ~/.android/debug.keystore does not exist."
+    echo "      For a dedicated key, run: ./scripts/make-release-key.sh"
     echo "      The build will fall back to the keystore inside the generated"
     echo "      android/ tree, which is NOT stable across prebuilds. Create the"
     echo "      standard one once so every future build matches:"

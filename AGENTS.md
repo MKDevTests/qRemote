@@ -468,11 +468,13 @@ Thin objects over `apiClient`.
 
 - **`plugins/withNativeTorrentFileCopy.js`** — iOS `withAppDelegate` mod;
   copies an incoming `.torrent` natively inside the open-URL callback.
-- **`plugins/withAndroidBuildTweaks.js`** — Android `withAppBuildGradle` mod:
-  a `.debug` `applicationIdSuffix` (side-by-side installs) and a release
-  signing config that points *outside* the generated tree, so the signature is
-  stable across prebuilds. Throws at prebuild time if the RN template's
-  anchors move.
+- **`plugins/withAndroidBuildTweaks.js`** — Android-only mods: a `.debug`
+  `applicationIdSuffix` (side-by-side installs), a release signing config
+  pointing *outside* the generated tree so the signature is stable across
+  prebuilds, and `reactNativeArchitectures` narrowed to the two ARM ABIs
+  (`defaultConfig.ndk.abiFilters` does **not** work — RN's Gradle plugin
+  overwrites it later and the APK silently keeps all four). Throws at prebuild
+  time if the template's anchors move.
 - **`scripts/_android-env.sh`** — shared: SDK detection, `local.properties`
   (forward slashes — see the file), Gradle JVM args (the Windows TLS-inspection
   workaround), prebuild-freshness check, `adb` resolution and install.
