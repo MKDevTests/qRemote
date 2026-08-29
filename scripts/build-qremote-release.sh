@@ -82,7 +82,11 @@ if [[ $CLEAN == 1 ]]; then
 fi
 
 echo "==> Building release APK"
-./gradlew :app:assembleRelease -Dorg.gradle.jvmargs="$JVM_ARGS"
+# --build-cache replays unchanged tasks from ~/.gradle/caches/build-cache-1,
+# which is what makes a rebuild after `expo prebuild` minutes instead of the
+# full ~17. Android Lint on the release variant is skipped: `npm run lint`,
+# `tsc` and the test suite already gate a release, and lintVital adds minutes.
+./gradlew :app:assembleRelease -Dorg.gradle.jvmargs="$JVM_ARGS" --build-cache     -x lintVitalAnalyzeRelease -x lintVitalReportRelease -x lintVitalRelease
 
 cd "$REPO_ROOT"
 APK="android/app/build/outputs/apk/release/app-release.apk"
