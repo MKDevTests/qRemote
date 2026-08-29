@@ -466,7 +466,12 @@
       "fileActions": "File Actions",
       "renameFile": "Rename File",
       "renameFolder": "Rename Folder",
-      "enterNewName": "Enter a new name"
+      "enterNewName": "Enter a new name",
+      "sortTitle": "Sort files",
+      "sortTorrent": "Torrent order",
+      "sortName": "Name",
+      "sortSizeDesc": "Size (largest first)",
+      "sortSizeAsc": "Size (smallest first)"
     },
     "logs": {
       "title": "Logs",

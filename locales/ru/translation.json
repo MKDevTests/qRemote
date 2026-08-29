@@ -466,7 +466,12 @@
       "fileActions": "Действия с файлом",
       "renameFile": "Переименовать файл",
       "renameFolder": "Переименовать папку",
-      "enterNewName": "Введите новое имя"
+      "enterNewName": "Введите новое имя",
+      "sortTitle": "Сортировать файлы",
+      "sortTorrent": "Порядок торрента",
+      "sortName": "Имя",
+      "sortSizeDesc": "Размер (сначала большие)",
+      "sortSizeAsc": "Размер (сначала маленькие)"
     },
     "logs": {
       "title": "Журнал",
