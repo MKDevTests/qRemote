@@ -88,9 +88,13 @@ export interface AppPreferences {
   defaultFilter: string;
 
   /**
-   * @deprecated Transitional — kept for backward compatibility.
-   * Task 2.2 removes multi-view UI; this key may be dropped once a
-   * preference migration system is in place.
+   * Compact or expanded torrent cards.
+   *
+   * This carried a @deprecated note saying the multi-view UI was going away
+   * and the key could be dropped "once a preference migration system is in
+   * place". Both halves were wrong by the time the migration system arrived:
+   * the toggle is live in Settings > Appearance and the torrent list reads
+   * this on every render. Not a migration candidate.
    */
   cardViewMode: 'compact' | 'expanded';
 
