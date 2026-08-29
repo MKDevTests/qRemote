@@ -20,6 +20,7 @@ import { syncApi } from '@/services/api/sync';
 import { useServer } from './ServerContext';
 import { getErrorMessage } from '@/utils/error';
 import { useReactiveReconnect } from '@/hooks/useReactiveReconnect';
+import { useCompletionNotifications } from '@/hooks/useCompletionNotifications';
 
 interface TorrentContextType {
   torrents: TorrentInfo[];
@@ -267,6 +268,10 @@ export function TorrentProvider({ children }: { children: ReactNode }) {
   const tags = isConnected ? (syncData?.tags ?? []) : [];
   const serverState = isConnected ? (syncData?.serverState ?? null) : null;
   const error = isRecoveringState ? null : queryError ? getErrorMessage(queryError) : null;
+
+  // Announce anything that finished while the app was open. The background
+  // task covers the rest; both share one snapshot so neither double-reports.
+  useCompletionNotifications(torrents, isConnected);
 
   return (
     <TorrentContext.Provider

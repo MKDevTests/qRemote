@@ -16,6 +16,14 @@ import { FocusAwareStatusBar } from '@/components/FocusAwareStatusBar';
 import { storageService } from '@/services/storage';
 import { AppPreferences } from '@/types/preferences';
 import { setHapticsEnabled } from '@/utils/haptics';
+import { useToast } from '@/context/ToastContext';
+import {
+  ensureNotificationPermission,
+  notificationsSupported,
+  resetCompletionSnapshot,
+  setCompletionNotificationsEnabled,
+} from '@/services/completion-notifications';
+import { syncCompletionTask } from '@/services/completion-task';
 import { spacing, borderRadius } from '@/constants/spacing';
 import { shadows } from '@/constants/shadows';
 import { typography } from '@/constants/typography';
@@ -24,9 +32,11 @@ export default function NotificationsSettingsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { isDark, colors } = useTheme();
+  const { showToast } = useToast();
 
   const [toastDuration, setToastDuration] = useState<number>(3000);
   const [hapticFeedback, setHapticFeedback] = useState(true);
+  const [notifyOnComplete, setNotifyOnComplete] = useState(false);
 
   const loadPreferences = async () => {
     try {
@@ -34,6 +44,7 @@ export default function NotificationsSettingsScreen() {
       setToastDuration(Number(prefs.toastDuration) || 3000);
       const hapticPref = prefs.hapticFeedback !== false;
       setHapticFeedback(hapticPref);
+      setNotifyOnComplete(prefs.notifyOnComplete === true);
     } catch {
       // Use defaults
     }
@@ -55,6 +66,30 @@ export default function NotificationsSettingsScreen() {
     } catch {
       // Ignore save errors
     }
+  };
+
+  /**
+   * Turning this on needs a permission the user can refuse, so the switch has
+   * to ask first and stay off if the answer is no — a toggle that reads "on"
+   * while Android silently drops every notification is worse than no toggle.
+   */
+  const handleNotifyToggle = async (value: boolean) => {
+    if (value) {
+      const granted = await ensureNotificationPermission();
+      if (!granted) {
+        setNotifyOnComplete(false);
+        showToast(t('screens.settings.notifyPermissionDenied'), 'error');
+        return;
+      }
+      // Start from what the server looks like now, so switching the feature on
+      // does not announce every torrent that finished before today.
+      await resetCompletionSnapshot();
+    }
+
+    setNotifyOnComplete(value);
+    setCompletionNotificationsEnabled(value);
+    await savePreference('notifyOnComplete', value);
+    await syncCompletionTask(value);
   };
 
   return (
@@ -130,6 +165,32 @@ export default function NotificationsSettingsScreen() {
                   ios_backgroundColor={colors.surfaceOutline}
                 />
               </View>
+              {notificationsSupported() && (
+                <>
+                  <View style={[styles.separator, { backgroundColor: colors.surfaceOutline }]} />
+                  <View style={styles.settingRow}>
+                    <View style={styles.settingLeft}>
+                      <Ionicons name="notifications-outline" size={22} color={colors.primary} />
+                      <View style={styles.settingText}>
+                        <Text style={[styles.settingLabel, { color: colors.text }]}>
+                          {t('screens.settings.notifyOnComplete')}
+                        </Text>
+                        <Text style={[styles.settingHint, { color: colors.textSecondary }]}>
+                          {t('screens.settings.notifyOnCompleteHint')}
+                        </Text>
+                      </View>
+                    </View>
+                    <Switch
+                      value={notifyOnComplete}
+                      onValueChange={(value) => {
+                        void handleNotifyToggle(value);
+                      }}
+                      trackColor={{ false: colors.surfaceOutline, true: colors.success }}
+                      ios_backgroundColor={colors.surfaceOutline}
+                    />
+                  </View>
+                </>
+              )}
             </View>
           </View>
         </ScrollView>
@@ -169,6 +230,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: spacing.md,
   },
+  settingText: { flex: 1 },
   settingLabel: { fontSize: 16, fontWeight: '500' },
   settingHint: { fontSize: 12, marginTop: 1 },
   separator: { height: 1, marginLeft: 50 },
