@@ -22,10 +22,23 @@ jest.mock('@/context/ThemeContext', () => ({
 }));
 
 describe('ActionMenu', () => {
-  const items: ActionMenuItemDef[] = [
-    { label: 'Pause', icon: 'pause', onPress: jest.fn() },
-    { label: 'Delete', icon: 'trash', onPress: jest.fn(), destructive: true },
-  ];
+  // Rebuilt for every test rather than shared across the file. ActionMenu
+  // defers an item's onPress by 150ms, and the tests that press an item
+  // without opting into fake timers leave that real timer pending: it fires
+  // partway through whichever test is running ~150ms later and records a call
+  // on the mock. `jest.clearAllTimers()` in afterEach cannot cancel it,
+  // because it only clears FAKE timers and those tests are on real ones. A
+  // fresh mock per test means the stray call lands somewhere nobody asserts
+  // on. (Symptom before this: 'closes then fires the item action after the
+  // delay' failing intermittently with 1 call where 0 were expected.)
+  let items: ActionMenuItemDef[];
+
+  beforeEach(() => {
+    items = [
+      { label: 'Pause', icon: 'pause', onPress: jest.fn() },
+      { label: 'Delete', icon: 'trash', onPress: jest.fn(), destructive: true },
+    ];
+  });
 
   afterEach(() => {
     jest.clearAllMocks();

@@ -58,6 +58,7 @@ export default function TorrentDefaultsScreen() {
   const [defaultSavePath, setDefaultSavePath] = useState('');
   const [autoCategorizeByTracker, setAutoCategorizeByTracker] = useState(false);
   const [defaultPriority, setDefaultPriority] = useState<number>(0);
+  const [defaultSequentialDownload, setDefaultSequentialDownload] = useState(false);
 
   // Saving Management — genuine qBittorrent server preferences, server is the sole source of truth
   const [autoTmmEnabled, setAutoTmmEnabled] = useState(false);
@@ -266,6 +267,7 @@ export default function TorrentDefaultsScreen() {
       setDefaultSavePath(prefs.defaultSavePath || '');
       setAutoCategorizeByTracker(prefs.autoCategorizeByTracker || false);
       setDefaultPriority(Number(prefs.defaultPriority) || 0);
+      setDefaultSequentialDownload(prefs.defaultSequentialDownload === true);
 
       // Saving Management fields come straight off the same serverPrefs fetch above
       const sp = serverPrefs as Record<string, unknown> | null;
@@ -911,6 +913,29 @@ export default function TorrentDefaultsScreen() {
                     const newVal = value ? 1 : 0;
                     setDefaultPriority(newVal);
                     savePreference('defaultPriority', newVal);
+                  }}
+                  trackColor={{ false: colors.surfaceOutline, true: colors.success }}
+                  ios_backgroundColor={colors.surfaceOutline}
+                />
+              </View>
+              <View style={[styles.separator, { backgroundColor: colors.surfaceOutline }]} />
+              <View style={styles.settingRow}>
+                <View style={styles.settingLeft}>
+                  <Ionicons name="swap-vertical-outline" size={22} color={colors.primary} />
+                  <View style={styles.settingTextGroup}>
+                    <Text style={[styles.settingLabel, { color: colors.text }]}>
+                      {t('screens.settings.sequentialDownloadDefault')}
+                    </Text>
+                    <Text style={[styles.settingHint, { color: colors.textSecondary }]}>
+                      {t('screens.settings.sequentialDownloadDefaultHint')}
+                    </Text>
+                  </View>
+                </View>
+                <Switch
+                  value={defaultSequentialDownload}
+                  onValueChange={(value) => {
+                    setDefaultSequentialDownload(value);
+                    savePreference('defaultSequentialDownload', value);
                   }}
                   trackColor={{ false: colors.surfaceOutline, true: colors.success }}
                   ios_backgroundColor={colors.surfaceOutline}

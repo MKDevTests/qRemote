@@ -17,10 +17,14 @@ describe('isTorrentFileUrl', () => {
     expect(isTorrentFileUrl('file:///Inbox/document.pdf')).toBe(false);
   });
 
-  it('rejects content:// URIs', () => {
+  // Android's "Open with" hands over an opaque content:// id with no name and
+  // no extension. The manifest's intent filters already decided this is a
+  // torrent before it reached us — see utils/torrent-file.ts.
+  it('accepts content:// URIs, name or no name', () => {
     expect(
       isTorrentFileUrl('content://com.android.providers.downloads.documents/document/1234'),
-    ).toBe(false);
+    ).toBe(true);
+    expect(isTorrentFileUrl('content://media/external/file/9182/ubuntu.torrent')).toBe(true);
   });
 
   it('rejects magnet links, http URLs, and app deep links', () => {
@@ -61,6 +65,21 @@ describe('extractTorrentFile', () => {
     expect(extractTorrentFile('https://example.com/file.torrent')).toBeNull();
     expect(extractTorrentFile(null)).toBeNull();
     expect(extractTorrentFile('')).toBeNull();
+  });
+
+  it('names an opaque content:// URI with the neutral fallback', () => {
+    const result = extractTorrentFile(
+      'content://com.android.providers.downloads.documents/document/1234',
+    );
+    expect(result).toEqual({
+      uri: 'content://com.android.providers.downloads.documents/document/1234',
+      name: 'download.torrent',
+    });
+  });
+
+  it('keeps a real name when the content:// path happens to carry one', () => {
+    const result = extractTorrentFile('content://media/external/file/9182/ubuntu.torrent');
+    expect(result?.name).toBe('ubuntu.torrent');
   });
 
   it('falls back to the raw segment when percent-decoding fails (safeDecode catch)', () => {

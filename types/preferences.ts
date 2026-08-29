@@ -1,14 +1,7 @@
 import { ColorTheme } from '@/services/color-theme-manager';
 
 export type SortField =
-  | 'name'
-  | 'size'
-  | 'progress'
-  | 'dlspeed'
-  | 'upspeed'
-  | 'ratio'
-  | 'priority'
-  | 'added_on';
+  'name' | 'size' | 'progress' | 'dlspeed' | 'upspeed' | 'ratio' | 'priority' | 'added_on';
 
 export type ExpandedCardField =
   | 'dlSpeed'
@@ -109,8 +102,27 @@ export interface AppPreferences {
   /** Last incomplete-torrents download path typed on the add-torrent screen */
   lastDownloadPath: string;
 
-  /** Default download priority for new torrents (0 = normal) */
+  /**
+   * Default download priority for new torrents (0 = normal).
+   *
+   * Historically repurposed as the "first/last piece priority by default"
+   * switch: any value > 0 means on. Kept as a number because renaming or
+   * retyping a stored key silently orphans it (there is no migration system).
+   */
   defaultPriority: number;
+
+  /**
+   * When enabled, every torrent this app adds starts with sequential download
+   * on, unless the add-torrent dialogue is showing that field and the user
+   * turned it off for that one.
+   *
+   * There is no qBittorrent-side preference to mirror this to: the WebUI API
+   * exposes sequentialDownload only as a per-torrent flag on torrents/add and
+   * torrents/toggleSequentialDownload, never globally. So it is applied
+   * client-side, at every call site that adds a torrent — see
+   * utils/torrent-add-defaults.ts.
+   */
+  defaultSequentialDownload: boolean;
 
   /** Duration in ms for toast notifications */
   toastDuration: number;
@@ -193,6 +205,7 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
   lastUseDownloadPath: false,
   lastDownloadPath: '',
   defaultPriority: 0,
+  defaultSequentialDownload: false,
   toastDuration: 3000,
   hapticFeedback: true,
   autoConnectLastServer: true,

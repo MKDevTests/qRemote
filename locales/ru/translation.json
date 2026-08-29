@@ -322,6 +322,8 @@
       "sortBy": "Сортировать по",
       "firstLastPiecePriority": "Загружать сначала крайние части",
       "firstLastPiecePriorityHint": "Сначала загружать первый и последний куски",
+      "sequentialDownloadDefault": "Загружать последовательно",
+      "sequentialDownloadDefaultHint": "Загружать части по порядку для каждого добавляемого торрента",
       "viewLogs": "Журнал подключения",
       "logsTitle": "Журнал",
       "clearLogs": "Очистить",
@@ -1187,5 +1189,23 @@
     "failedToLoadServer": "Не удалось загрузить сервер",
     "crashTitle": "Что-то пошло не так",
     "crashMessage": "В qRemote произошла непредвиденная ошибка. Ваши серверы и настройки не пострадали."
+  },
+  "updates": {
+    "title": "Обновления",
+    "check": "Проверить обновления",
+    "checking": "Проверка…",
+    "currentVersion": "Установлена: {{version}}",
+    "upToDate": "У вас последняя версия ({{version}})",
+    "available": "Доступна версия {{version}}",
+    "noApk": "К релизу {{version}} не приложен APK для Android",
+    "downloadAndInstall": "Скачать и установить",
+    "install": "Установить",
+    "downloading": "Загрузка…",
+    "downloadingPercent": "Загрузка… {{percent}} %",
+    "viewOnGitHub": "Открыть на GitHub",
+    "errorNetwork": "Не удалось связаться с GitHub",
+    "errorRateLimited": "Достигнут лимит запросов GitHub — попробуйте позже",
+    "errorDownload": "Ошибка загрузки",
+    "errorInstall": "Не удалось запустить установку"
   }
 }

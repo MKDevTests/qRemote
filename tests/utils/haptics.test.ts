@@ -1,7 +1,9 @@
 jest.mock('expo-haptics', () => ({
-  impactAsync: jest.fn(),
-  notificationAsync: jest.fn(),
-  selectionAsync: jest.fn(),
+  // Resolved promises, like the real module: utils/haptics attaches a .catch
+  // to whatever these return.
+  impactAsync: jest.fn(() => Promise.resolve()),
+  notificationAsync: jest.fn(() => Promise.resolve()),
+  selectionAsync: jest.fn(() => Promise.resolve()),
   ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' },
   NotificationFeedbackType: { Success: 'success', Error: 'error', Warning: 'warning' },
 }));
@@ -62,8 +64,18 @@ describe('haptics', () => {
     expect(Haptics.selectionAsync).toHaveBeenCalled();
   });
 
-  it('does nothing on non-iOS platforms', () => {
+  it('fires on Android too — expo-haptics maps these onto the vibrator', () => {
     mockPlatform.OS = 'android';
+    haptics.light();
+    haptics.success();
+    haptics.selection();
+    expect(Haptics.impactAsync).toHaveBeenCalled();
+    expect(Haptics.notificationAsync).toHaveBeenCalled();
+    expect(Haptics.selectionAsync).toHaveBeenCalled();
+  });
+
+  it('does nothing on web, which has no haptics API', () => {
+    mockPlatform.OS = 'web';
     haptics.light();
     haptics.success();
     haptics.selection();

@@ -220,10 +220,46 @@ class ApiClient {
           );
         }
 
-        // Handle network errors
-        if (error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK') {
-          clogError('HTTP', `Network error (${error.code}) — ${reqUrl}`);
+        // A real timeout: the request was sent and nothing came back in time.
+        if (error.code === 'ECONNABORTED') {
+          clogError('HTTP', `Timeout — ${reqUrl}`);
           throw apiError('Connection timeout. Please check your server connection.', status);
+        }
+
+        // ERR_NETWORK means the request never completed at the transport layer.
+        // It was previously reported as a timeout, which is both wrong and
+        // actively misleading: on Android the most common causes are the
+        // platform *refusing* the request outright, and no amount of waiting or
+        // retrying changes that. Name the cause when the native message reaches
+        // us (React Native does not always propagate it through axios), and
+        // otherwise say plainly what could not be done.
+        if (error.code === 'ERR_NETWORK') {
+          const native = `${error.message} ${(error.cause as Error | undefined)?.message ?? ''}`;
+          clogError('HTTP', `Network error — ${reqUrl}: ${native.trim()}`);
+
+          if (/cleartext/i.test(native)) {
+            throw apiError(
+              `Android blocked this request because ${reqUrl} uses plain HTTP. ` +
+                `Use HTTPS, or install a build that permits cleartext traffic.`,
+              status,
+            );
+          }
+          if (/trust anchor|CertPathValidator|SSLHandshake|certificate/i.test(native)) {
+            throw apiError(
+              `The server's TLS certificate was rejected. If it is self-signed or ` +
+                `issued by your own CA, install that CA on this device, or enable ` +
+                `"Allow Self-Signed Certificate" for this server.`,
+              status,
+            );
+          }
+          // Keep the literal "Network Error" in the text: hooks/useReactiveReconnect
+          // matches on it to decide a re-login is worth attempting.
+          throw apiError(
+            `Network Error: could not reach ${reqUrl}. Check the host, port and ` +
+              `base path, that the WebUI is reachable from this device's network, ` +
+              `and — for HTTPS — that its certificate is trusted here.`,
+            status,
+          );
         }
 
         // Handle other errors

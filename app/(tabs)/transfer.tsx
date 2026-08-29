@@ -33,6 +33,7 @@ import { torrentsApi } from '@/services/api/torrents';
 import { applicationApi } from '@/services/api/application';
 import { formatSize, formatSpeed, formatTime, kbToBytes, bytesToKb } from '@/utils/format';
 import { parseSpeedLimitInput } from '@/utils/limit-input';
+import { isDownloadingState, isUploadingState } from '@/utils/torrent-state';
 import { spacing } from '@/constants/spacing';
 import { typography } from '@/constants/typography';
 import { useSpeedTracker } from '@/hooks/useSpeedTracker';
@@ -275,8 +276,11 @@ export default function TransferScreen() {
   const handlePauseAllDownloads = async () => {
     setActionLoading('pauseDL');
     try {
+      // Every download-side state, not just the three that happen to be moving
+      // bytes: "Pause all downloads" that quietly skips the stalled and queued
+      // ones has not paused all downloads.
       const downloadingHashes = torrents
-        .filter((t) => t.state === 'downloading' || t.state === 'forcedDL' || t.state === 'metaDL')
+        .filter((t) => isDownloadingState(t.state))
         .map((t) => t.hash);
       if (downloadingHashes.length === 0) {
         showToast(t('screens.transfer.noDlTorrents'), 'info');
@@ -296,9 +300,7 @@ export default function TransferScreen() {
   const handlePauseAllUploads = async () => {
     setActionLoading('pauseUL');
     try {
-      const uploadingHashes = torrents
-        .filter((t) => t.state === 'uploading' || t.state === 'forcedUP' || t.state === 'stalledUP')
-        .map((t) => t.hash);
+      const uploadingHashes = torrents.filter((t) => isUploadingState(t.state)).map((t) => t.hash);
       if (uploadingHashes.length === 0) {
         showToast(t('screens.transfer.noUlTorrents'), 'info');
         setActionLoading(null);

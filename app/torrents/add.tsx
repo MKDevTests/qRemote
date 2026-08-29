@@ -38,6 +38,7 @@ import { shadows } from '@/constants/shadows';
 import { typography } from '@/constants/typography';
 import { extractMagnetLink } from '@/utils/magnet';
 import { groupCartItemsForAdd } from '@/utils/search-cart';
+import { getTorrentAddDefaults, TorrentAddDefaults } from '@/utils/torrent-add-defaults';
 
 type AddTorrentOptions = Parameters<typeof torrentsApi.addTorrent>[1];
 type AddTorrentFileOptions = Parameters<typeof torrentsApi.addTorrentFile>[1];
@@ -97,6 +98,11 @@ export default function AddTorrentFullScreen() {
   const [serverSavePath, setServerSavePath] = useState('');
   const [sequentialDownload, setSequentialDownload] = useState(false);
   const [firstLastPiecePrio, setFirstLastPiecePrio] = useState(false);
+  // The same two values as stored preferences, kept so buildOptions can still
+  // apply them when the compact dialogue variant hides those switches.
+  const [addDefaults, setAddDefaults] = useState<TorrentAddDefaults>(() =>
+    getTorrentAddDefaults(null),
+  );
   const [dlLimit, setDlLimit] = useState('');
   const [upLimit, setUpLimit] = useState('');
   const [ratioLimit, setRatioLimit] = useState('');
@@ -140,7 +146,10 @@ export default function AddTorrentFullScreen() {
           setStopped(!!prefs.pauseOnAdd);
           setUseDownloadPath(!!prefs.lastUseDownloadPath);
           setDownloadPath(prefs.lastDownloadPath || '');
-          setFirstLastPiecePrio(Number(prefs.defaultPriority) > 0);
+          const defaults = getTorrentAddDefaults(prefs);
+          setAddDefaults(defaults);
+          setFirstLastPiecePrio(defaults.firstLastPiecePrio);
+          setSequentialDownload(defaults.sequentialDownload);
         } catch {
           setFieldVisibility(DEFAULT_PREFERENCES.addTorrentDialogueFields);
         }
@@ -260,8 +269,18 @@ export default function AddTorrentFullScreen() {
       opts.useDownloadPath = true;
       opts.downloadPath = downloadPath.trim();
     }
-    if (fieldVisibility.sequentialDownload) opts.sequentialDownload = sequentialDownload;
-    if (fieldVisibility.firstLastPiecePrio) opts.firstLastPiecePrio = firstLastPiecePrio;
+    // Both switches are initialised from the global defaults, so when these
+    // fields are visible their value already carries the default — or the
+    // user's deliberate override for this one torrent, which must win. When
+    // the compact variant hides them there is no switch to read, so fall back
+    // to the default directly: "always sequential" has to keep applying even
+    // though the field is off screen.
+    opts.sequentialDownload = fieldVisibility.sequentialDownload
+      ? sequentialDownload
+      : addDefaults.sequentialDownload;
+    opts.firstLastPiecePrio = fieldVisibility.firstLastPiecePrio
+      ? firstLastPiecePrio
+      : addDefaults.firstLastPiecePrio;
 
     if (fieldVisibility.dlLimit && dlLimit.trim()) {
       const n = Number(dlLimit);

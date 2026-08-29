@@ -1,11 +1,12 @@
 const packageJson = require('./package.json');
 
-// Set via eas.json's "development" build profile `env` block (NOT
-// EAS_BUILD_PROFILE — that's only injected in the remote build worker, not
-// during eas-cli's local pre-build config resolution, which is when
-// credentials/bundle id registration happens). A distinct bundle id lets the
-// dev-client build install side-by-side with the App Store build on device.
-const isDevelopmentBuild = process.env.APP_VARIANT === 'development';
+// Android's versionCode is a single integer and must increase on every build
+// users can update to. Deriving it from the semver in package.json keeps it a
+// pure function of the version — there is no second counter to forget to bump.
+// Layout: MAJOR * 10000 + MINOR * 100 + PATCH, so 3.8.40 -> 30840. Room for 99
+// patches and 99 minors per major, and monotonic as long as semver is.
+const [MAJOR, MINOR, PATCH] = packageJson.version.split('.').map((part) => parseInt(part, 10) || 0);
+const ANDROID_VERSION_CODE = MAJOR * 10000 + MINOR * 100 + PATCH;
 
 module.exports = {
   expo: {
@@ -29,7 +30,11 @@ module.exports = {
     // can be rewritten by the next prebuild.
     ios: {
       supportsTablet: true,
-      bundleIdentifier: isDevelopmentBuild ? 'com.taylorcox75.expogo' : 'com.qRemote.app',
+      // Constant since the EAS pipeline was removed: the dev-client/production
+      // split came from eas.json's "development" profile setting APP_VARIANT,
+      // and that file is gone (this fork has no Apple or EAS credentials).
+      // A non-EAS build already resolved to this identifier.
+      bundleIdentifier: 'com.qRemote.app',
       appStoreUrl: 'https://apps.apple.com/us/app/qremote-for-qbittorrent/id6756276747',
       infoPlist: {
         // Must be false: RN's StatusBar API (expo-status-bar / FocusAwareStatusBar)
@@ -91,6 +96,76 @@ module.exports = {
         ],
       },
     },
+    android: {
+      package: 'io.github.mkdevtests.qremote',
+      versionCode: ANDROID_VERSION_CODE,
+      adaptiveIcon: {
+        foregroundImage: './assets/icon.png',
+        backgroundColor: '#0A0A0A',
+      },
+      // NOTE: cleartext HTTP and user-installed CAs are enabled by
+      // ./plugins/withAndroidNetworkSecurity, NOT here. `usesCleartextTraffic`
+      // is not a key in the Expo android config schema — setting it here is
+      // accepted in silence and produces a manifest without it, which is how
+      // this shipped once already with every HTTP server unreachable.
+      permissions: [
+        'android.permission.INTERNET',
+        'android.permission.ACCESS_NETWORK_STATE',
+        // Haptics (utils/haptics.ts) — no-op without it.
+        'android.permission.VIBRATE',
+        // In-app updater (services/updater.ts) installs the downloaded APK
+        // through PackageInstaller; without this the install intent is
+        // rejected before the system dialog ever appears.
+        'android.permission.REQUEST_INSTALL_PACKAGES',
+      ],
+      // Pulled in transitively and never used by this app: expo-dev-client
+      // adds SYSTEM_ALERT_WINDOW for its debug overlay, and
+      // expo-file-system / expo-document-picker add the legacy storage pair
+      // (already capped at maxSdkVersion 32). Leaving them in makes the
+      // release APK ask for scary permissions it never exercises.
+      blockedPermissions: [
+        'android.permission.SYSTEM_ALERT_WINDOW',
+        'android.permission.READ_EXTERNAL_STORAGE',
+        'android.permission.WRITE_EXTERNAL_STORAGE',
+      ],
+      intentFilters: [
+        // magnet: links from a browser or any other app.
+        {
+          action: 'VIEW',
+          category: ['DEFAULT', 'BROWSABLE'],
+          data: [{ scheme: 'magnet' }],
+        },
+        // .torrent files opened from a file manager / downloads / share
+        // sheet. Android routes these three ways depending on the source
+        // app, and covering only one leaves the app missing from "Open with"
+        // for the other two:
+        //   1. correct MIME type on a content:// or file:// URI
+        //   2. wrong/absent MIME type but a .torrent path (very common —
+        //      file managers frequently hand over application/octet-stream)
+        //   3. an explicit SEND share
+        {
+          action: 'VIEW',
+          category: ['DEFAULT', 'BROWSABLE'],
+          data: [
+            { scheme: 'content', mimeType: 'application/x-bittorrent' },
+            { scheme: 'file', mimeType: 'application/x-bittorrent' },
+          ],
+        },
+        {
+          action: 'VIEW',
+          category: ['DEFAULT', 'BROWSABLE'],
+          data: [
+            { scheme: 'file', host: '*', pathPattern: '.*\\.torrent' },
+            { scheme: 'content', host: '*', pathPattern: '.*\\.torrent' },
+          ],
+        },
+        {
+          action: 'SEND',
+          category: ['DEFAULT'],
+          data: [{ mimeType: 'application/x-bittorrent' }],
+        },
+      ],
+    },
     web: {
       favicon: './assets/favicon.png',
     },
@@ -101,20 +176,25 @@ module.exports = {
       'expo-secure-store',
       'expo-sharing',
       'expo-status-bar',
+      // iOS-only mod (withAppDelegate); prebuild skips it for -p android.
       './plugins/withNativeTorrentFileCopy',
+      // Android-only mods (withAppBuildGradle / withAndroidManifest); prebuild
+      // skips them for -p ios.
+      './plugins/withAndroidBuildTweaks',
+      './plugins/withAndroidNetworkSecurity',
     ],
     extra: {
       router: {},
-      eas: {
-        projectId: 'e2539074-777d-46d3-ae9e-9e584f9e9bb0',
-      },
+      // Where the in-app updater looks for new Android builds. Changing the
+      // fork owner means changing this and nothing else.
+      githubRepo: 'MKDevTests/qRemote',
     },
-    updates: {
-      url: 'https://u.expo.dev/e2539074-777d-46d3-ae9e-9e584f9e9bb0',
-    },
-    runtimeVersion: {
-      policy: 'appVersion',
-    },
-    owner: 'taylorcox75',
+    // NOTE: no `updates` / `extra.eas` / `runtimeVersion` block, and
+    // expo-updates is not a dependency. Upstream ships EAS OTA updates pointed
+    // at taylorcox75's Expo project — a fork that kept that URL would silently
+    // pull someone else's JS bundle over its own. Updates go through GitHub
+    // releases instead (see services/updater.ts), so the whole OTA runtime is
+    // dead weight in the APK. `runtimeVersion` only means anything to
+    // expo-updates, so it went with it.
   },
 };

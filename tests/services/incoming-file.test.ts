@@ -46,8 +46,19 @@ describe('persistIncomingTorrentFile', () => {
     );
   });
 
-  it('returns the original file unchanged for non-file:// URIs', async () => {
+  // Android's content:// read grant belongs to the receiving activity and dies
+  // with it, so these are copied for the same reason iOS file:// URLs are.
+  it('copies content:// URIs into the cache as well', async () => {
     const file = { uri: 'content://some/provider/1', name: 'download.torrent' };
+    const result = await persistIncomingTorrentFile(file);
+
+    expect(copyAsync).toHaveBeenCalled();
+    expect(result?.uri).toMatch(/^file:\/\/\/cache\/incoming-torrents\/\d+-download\.torrent$/);
+    expect(result?.name).toBe('download.torrent');
+  });
+
+  it('returns the original file unchanged for URIs it cannot own (http)', async () => {
+    const file = { uri: 'https://example.com/ubuntu.torrent', name: 'ubuntu.torrent' };
     const result = await persistIncomingTorrentFile(file);
 
     expect(result).toBe(file);

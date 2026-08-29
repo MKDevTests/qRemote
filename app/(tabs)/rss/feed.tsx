@@ -34,6 +34,7 @@ import { useToast } from '@/context/ToastContext';
 import { useServer } from '@/context/ServerContext';
 import { useRssFeeds } from '@/hooks/useRssFeeds';
 import { torrentsApi } from '@/services/api/torrents';
+import { storageService } from '@/services/storage';
 import { RssArticle } from '@/types/api';
 import { spacing, borderRadius } from '@/constants/spacing';
 import { shadows } from '@/constants/shadows';
@@ -41,6 +42,7 @@ import { typography } from '@/constants/typography';
 import { getErrorMessage } from '@/utils/error';
 import { haptics } from '@/utils/haptics';
 import { toSearchQuery } from '@/utils/rss';
+import { withTorrentAddDefaults } from '@/utils/torrent-add-defaults';
 
 export default function RssFeedArticlesScreen() {
   const { t } = useTranslation();
@@ -159,8 +161,12 @@ export default function RssFeedArticlesScreen() {
     }
     setBulkLoading(true);
     try {
+      // Adding from RSS has no options UI, so the global defaults are the only
+      // thing that can set sequential / first-last. Read once for the batch.
+      const prefs = await storageService.getPreferences().catch(() => null);
+      const addOptions = withTorrentAddDefaults(undefined, prefs);
       const results = await Promise.allSettled(
-        targets.map((a) => torrentsApi.addTorrent(a.torrentURL as string)),
+        targets.map((a) => torrentsApi.addTorrent(a.torrentURL as string, addOptions)),
       );
       const succeeded = results.filter((r) => r.status === 'fulfilled').length;
       const failed = results.length - succeeded;
@@ -253,7 +259,8 @@ export default function RssFeedArticlesScreen() {
     async (article: RssArticle) => {
       if (!article.torrentURL) return;
       try {
-        await torrentsApi.addTorrent(article.torrentURL);
+        const prefs = await storageService.getPreferences().catch(() => null);
+        await torrentsApi.addTorrent(article.torrentURL, withTorrentAddDefaults(undefined, prefs));
         haptics.success();
         showToast(t('screens.rss.articleAddedToast'), 'success');
       } catch (err: unknown) {
