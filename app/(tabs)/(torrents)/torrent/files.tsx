@@ -24,12 +24,15 @@ import { useToast } from '@/context/ToastContext';
 import { FocusAwareStatusBar } from '@/components/FocusAwareStatusBar';
 import { InputModal } from '@/components/InputModal';
 import { EmptyState } from '@/components/EmptyState';
+import { OptionPicker, OptionPickerItem } from '@/components/OptionPicker';
 import { torrentsApi } from '@/services/api/torrents';
+import { storageService } from '@/services/storage';
 import { TorrentFile, FilePriority } from '@/types/api';
 import { formatProgress } from '@/utils/format';
 import { spacing, borderRadius } from '@/constants/spacing';
 import { shadows } from '@/constants/shadows';
 import { getErrorMessage } from '@/utils/error';
+import { FileSortMode, isFileSortMode, sortTorrentFiles } from '@/utils/file-sort';
 
 interface FileTreeItem {
   type: 'file' | 'folder';
@@ -61,6 +64,8 @@ export default function TorrentFilesScreen() {
   const [menuFile, setMenuFile] = useState<TorrentFile | null>(null);
   const [bulkPriorityMenuVisible, setBulkPriorityMenuVisible] = useState(false);
   const [inputModalVisible, setInputModalVisible] = useState(false);
+  const [sortMode, setSortMode] = useState<FileSortMode>('torrent');
+  const [sortPickerVisible, setSortPickerVisible] = useState(false);
   const [inputModalConfig, setInputModalConfig] = useState<{
     title: string;
     message?: string;
@@ -100,6 +105,18 @@ export default function TorrentFilesScreen() {
     // loadFiles isn't memoized — only re-run when hash/isConnected change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hash, isConnected]);
+
+  // Restore the last chosen order. A stale value from an older build (or a
+  // hand-edited store) falls back to the torrent's own order.
+  useEffect(() => {
+    let cancelled = false;
+    storageService.getPreferences().then((prefs) => {
+      if (!cancelled && isFileSortMode(prefs.fileSortMode)) setSortMode(prefs.fileSortMode);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const formatSize = (bytes: number): string => {
     if (bytes === 0) return '0 B';
@@ -348,13 +365,31 @@ export default function TorrentFilesScreen() {
     return 'document';
   };
 
+  // Sorting has to happen before the tree walk below, which relies on every
+  // file of a folder being contiguous — see utils/file-sort.ts.
+  const sortedFiles = useMemo(() => sortTorrentFiles(files, sortMode), [files, sortMode]);
+
+  const sortOptions: OptionPickerItem[] = [
+    { label: t('screens.files.sortTorrent'), value: 'torrent', icon: 'list-outline' },
+    { label: t('screens.files.sortName'), value: 'name', icon: 'text-outline' },
+    { label: t('screens.files.sortSizeDesc'), value: 'sizeDesc', icon: 'arrow-down-outline' },
+    { label: t('screens.files.sortSizeAsc'), value: 'sizeAsc', icon: 'arrow-up-outline' },
+  ];
+
+  const handleSelectSortMode = async (value: string) => {
+    if (!isFileSortMode(value)) return;
+    setSortMode(value);
+    setSortPickerVisible(false);
+    await storageService.savePreferences({ fileSortMode: value });
+  };
+
   // Build tree structure and flatten for display
   const displayItems = useMemo(() => {
     const items: Array<FileTreeItem & { id: string }> = [];
     const folderMap = new Map<string, { files: TorrentFile[]; indices: number[]; size: number }>();
 
     // Group files by folder and track indices
-    files.forEach((file) => {
+    sortedFiles.forEach((file) => {
       const parts = file.name.split('/');
 
       // Track folders and their file indices
@@ -375,7 +410,7 @@ export default function TorrentFilesScreen() {
     // Build display list with proper hierarchy
     const addedFolders = new Set<string>();
 
-    files.forEach((file) => {
+    sortedFiles.forEach((file) => {
       const parts = file.name.split('/');
       const fileName = parts[parts.length - 1];
       const depth = parts.length - 1;
@@ -436,7 +471,7 @@ export default function TorrentFilesScreen() {
     });
 
     return items;
-  }, [files, collapsedFolders]);
+  }, [sortedFiles, collapsedFolders]);
 
   if (!isConnected) {
     return (
@@ -480,7 +515,17 @@ export default function TorrentFilesScreen() {
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={[styles.title, { color: colors.text }]}>{t('screens.files.title')}</Text>
-          <View style={styles.placeholder} />
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => setSortPickerVisible(true)}
+            accessibilityLabel={t('screens.files.sortTitle')}
+          >
+            <Ionicons
+              name="swap-vertical"
+              size={22}
+              color={sortMode === 'torrent' ? colors.text : colors.primary}
+            />
+          </TouchableOpacity>
         </View>
 
         {files.length === 0 ? (
@@ -900,6 +945,15 @@ export default function TorrentFilesScreen() {
           onCancel={() => setInputModalVisible(false)}
           onConfirm={inputModalConfig.onConfirm}
         />
+
+        <OptionPicker
+          visible={sortPickerVisible}
+          title={t('screens.files.sortTitle')}
+          options={sortOptions}
+          selectedValue={sortMode}
+          onSelect={handleSelectSortMode}
+          onClose={() => setSortPickerVisible(false)}
+        />
       </SafeAreaView>
     </>
   );
@@ -932,9 +986,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '600',
-  },
-  placeholder: {
-    width: 40,
   },
   bulkActionsHeader: {
     flexDirection: 'row',

@@ -597,6 +597,12 @@ modal, the full dialogue, RSS single + bulk, and the Search tab's instant add.
 endpoint applies one `tags` value per request) · `server-export.ts` (strips
 `password`/`basicAuthPassword`/`apiKey` on export, forces them empty on import) ·
 `save-paths.ts` (`getKnownSavePaths`, derived from live data — no API call) ·
+`file-sort.ts` (`sortTorrentFiles` — ordering for the torrent file browser.
+Not a flat `.sort()`: the browser injects a folder header the first time it
+meets a file under that folder, so every folder's files must stay contiguous.
+Rebuilds the tree, sorts each level, flattens depth-first; folders sort by
+their aggregate size, ties keep qBittorrent's order. Mode persisted as the
+`fileSortMode` preference) ·
 `version.ts` (`APP_VERSION`).
 
 ### Types, constants, i18n

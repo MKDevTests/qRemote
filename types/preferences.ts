@@ -1,4 +1,5 @@
 import { ColorTheme } from '@/services/color-theme-manager';
+import { FileSortMode } from '@/utils/file-sort';
 
 export type SortField =
   'name' | 'size' | 'progress' | 'dlspeed' | 'upspeed' | 'ratio' | 'priority' | 'added_on';
@@ -79,6 +80,9 @@ export interface AppPreferences {
 
   /** Sort direction for the torrent list */
   defaultSortDirection: 'asc' | 'desc';
+
+  /** Order of the torrent file browser — see utils/file-sort.ts */
+  fileSortMode: FileSortMode;
 
   /** Active torrent state filter (e.g. 'all', 'downloading', 'seeding') */
   defaultFilter: string;
@@ -210,6 +214,7 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
   tagColors: {},
   defaultSortBy: 'added_on',
   defaultSortDirection: 'desc',
+  fileSortMode: 'torrent',
   defaultFilter: 'all',
   cardViewMode: 'compact',
   pauseOnAdd: false,
