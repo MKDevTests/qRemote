@@ -384,7 +384,9 @@
         "addedTime": "Время"
       },
       "searchAddOpensDialogue": "+ в поиске открывает диалог",
-      "searchAddOpensDialogueHint": "Нажатие + на результате поиска открывает диалог добавления торрента вместо немедленного добавления."
+      "searchAddOpensDialogueHint": "Нажатие + на результате поиска открывает диалог добавления торрента вместо немедленного добавления.",
+      "dedupeSearchResults": "Объединять дубликаты",
+      "dedupeSearchResultsHint": "Одна строка на релиз, если его вернули несколько индексаторов — остаётся с лучшими сидами"
     },
     "transfer": {
       "title": "Передача",
@@ -565,7 +567,8 @@
       "cartEmpty": "В очереди пока ничего нет",
       "cartClearAll": "Очистить всё",
       "cartCheckout": "Продолжить ({{count}})",
-      "cartAccessibility": "Очередь добавления, {{count}} торрент(ов)"
+      "cartAccessibility": "Очередь добавления, {{count}} торрент(ов)",
+      "forgetTerm": "Забыть «{{term}}»"
     },
     "rss": {
       "feedsTitle": "RSS-ленты",
@@ -737,7 +740,8 @@
     "uploadLimit": "Лимит отдачи",
     "shareRatio": "Коэффициент раздачи",
     "globalSpeedLimit": "Общий лимит скорости ({{status}})",
-    "trackers": "Трекеры"
+    "trackers": "Трекеры",
+    "exportTorrent": "Экспорт .torrent"
   },
   "alerts": {
     "deleteTorrent": "Удалить торрент?",
@@ -1115,7 +1119,8 @@
     "prioritySetForCount": "Приоритет {{label}} для {{count}} файл(ов)",
     "fileSelected": "Выбран файл: {{name}}",
     "fileRenamed": "Файл переименован",
-    "folderRenamed": "Папка переименована"
+    "folderRenamed": "Папка переименована",
+    "exportTorrentFailed": "Не удалось экспортировать файл .torrent"
   },
   "errors": {
     "generic": "Произошла ошибка",

@@ -384,7 +384,9 @@
         "addedTime": ""
       },
       "searchAddOpensDialogue": "Search + opens dialogue",
-      "searchAddOpensDialogueHint": "Tapping + on a search result opens the add-torrent dialogue instead of adding straight away."
+      "searchAddOpensDialogueHint": "Tapping + on a search result opens the add-torrent dialogue instead of adding straight away.",
+      "dedupeSearchResults": "Merge duplicate results",
+      "dedupeSearchResultsHint": "One row per release when several indexers report the same one, keeping the best-seeded"
     },
     "transfer": {
       "title": "Transfer",
@@ -565,7 +567,8 @@
       "cartEmpty": "Nothing queued yet",
       "cartClearAll": "Clear all",
       "cartCheckout": "Continue ({{count}})",
-      "cartAccessibility": "Add queue, {{count}} torrent(s)"
+      "cartAccessibility": "Add queue, {{count}} torrent(s)",
+      "forgetTerm": "Forget \"{{term}}\""
     },
     "rss": {
       "feedsTitle": "RSS Feeds",
@@ -737,7 +740,8 @@
     "uploadLimit": "Upload Limit",
     "shareRatio": "Share Ratio",
     "globalSpeedLimit": "Global Speed Limit ({{status}})",
-    "trackers": "Trackers"
+    "trackers": "Trackers",
+    "exportTorrent": "Export .torrent"
   },
   "alerts": {
     "deleteTorrent": "Delete torrent?",
@@ -1115,7 +1119,8 @@
     "dlLimitSetKb": "Download limit set to {{value}} KiB/s",
     "ulLimitSetKb": "Upload limit set to {{value}} KiB/s",
     "fileRenamed": "File renamed",
-    "folderRenamed": "Folder renamed"
+    "folderRenamed": "Folder renamed",
+    "exportTorrentFailed": "Could not export the .torrent file"
   },
   "errors": {
     "generic": "An error occurred",

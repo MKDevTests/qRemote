@@ -57,6 +57,7 @@ export default function TorrentDefaultsScreen() {
   const [pauseOnAdd, setPauseOnAdd] = useState(false);
   const [defaultSavePath, setDefaultSavePath] = useState('');
   const [autoCategorizeByTracker, setAutoCategorizeByTracker] = useState(false);
+  const [dedupeSearchResults, setDedupeSearchResults] = useState(true);
   const [defaultPriority, setDefaultPriority] = useState<number>(0);
   const [defaultSequentialDownload, setDefaultSequentialDownload] = useState(false);
 
@@ -266,6 +267,7 @@ export default function TorrentDefaultsScreen() {
       }
       setDefaultSavePath(prefs.defaultSavePath || '');
       setAutoCategorizeByTracker(prefs.autoCategorizeByTracker || false);
+      setDedupeSearchResults(prefs.dedupeSearchResults !== false);
       setDefaultPriority(Number(prefs.defaultPriority) || 0);
       setDefaultSequentialDownload(prefs.defaultSequentialDownload === true);
 
@@ -889,6 +891,29 @@ export default function TorrentDefaultsScreen() {
                   onValueChange={(value) => {
                     setAutoCategorizeByTracker(value);
                     savePreference('autoCategorizeByTracker', value);
+                  }}
+                  trackColor={{ false: colors.surfaceOutline, true: colors.success }}
+                  ios_backgroundColor={colors.surfaceOutline}
+                />
+              </View>
+              <View style={[styles.separator, { backgroundColor: colors.surfaceOutline }]} />
+              <View style={styles.settingRow}>
+                <View style={styles.settingLeft}>
+                  <Ionicons name="copy-outline" size={22} color={colors.primary} />
+                  <View style={styles.settingTextGroup}>
+                    <Text style={[styles.settingLabel, { color: colors.text }]}>
+                      {t('screens.settings.dedupeSearchResults')}
+                    </Text>
+                    <Text style={[styles.settingHint, { color: colors.textSecondary }]}>
+                      {t('screens.settings.dedupeSearchResultsHint')}
+                    </Text>
+                  </View>
+                </View>
+                <Switch
+                  value={dedupeSearchResults}
+                  onValueChange={(value) => {
+                    setDedupeSearchResults(value);
+                    savePreference('dedupeSearchResults', value);
                   }}
                   trackColor={{ false: colors.surfaceOutline, true: colors.success }}
                   ios_backgroundColor={colors.surfaceOutline}

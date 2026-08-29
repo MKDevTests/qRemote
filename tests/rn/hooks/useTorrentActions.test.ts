@@ -105,13 +105,17 @@ describe('useTorrentActions', () => {
 
   it('builds priority actions for a non-paused torrent', async () => {
     const { result } = await renderHook(() => useTorrentActions(baseTorrent));
-    expect(result.current.actionMenuItems).toHaveLength(12);
+    expect(result.current.actionMenuItems).toHaveLength(13);
     expect(result.current.actionMenuItems[0].label).toBe('actions.pause');
     expect(result.current.actionMenuItems[3].label).toBe('actions.increasePriority');
     expect(result.current.actionMenuItems[4].label).toBe('actions.decreasePriority');
     expect(result.current.actionMenuItems[5].label).toBe('actions.maxPriority');
     expect(result.current.actionMenuItems[6].label).toBe('actions.setDlLimit');
     expect(result.current.actionMenuItems[7].label).toBe('actions.setUlLimit');
+    // Export sits just above Delete, which stays last so a destructive item is
+    // never what a mistimed tap lands on.
+    expect(result.current.actionMenuItems[11].label).toBe('actions.exportTorrent');
+    expect(result.current.actionMenuItems[12].label).toBe('common.delete');
   });
 
   it('shows resume label when torrent is paused', async () => {

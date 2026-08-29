@@ -3,6 +3,11 @@ import * as SecureStore from 'expo-secure-store';
 import { ServerConfig } from '@/types/api';
 import { AppPreferences } from '@/types/preferences';
 import { parseStoredCustomHeaders, sanitizeCustomHeaders } from '@/utils/customHeaders';
+import {
+  SCHEMA_VERSION_KEY,
+  StoredPreferences,
+  migratePreferences,
+} from '@/utils/preference-migrations';
 
 const STORAGE_KEYS = {
   SERVERS: 'servers',
@@ -230,21 +235,79 @@ export const storageService = {
   },
 
   /**
-   * Save preferences
+   * Write preferences, **merged** over what is already stored.
+   *
+   * It used to replace the whole blob, which made every call site responsible
+   * for spreading the current preferences in first. Almost all of them did;
+   * the one that forgot silently wiped every other setting — theme, colours,
+   * filters, add-torrent defaults — the first time the user touched the file
+   * sort order. That is not a mistake worth being able to make, so the merge
+   * lives here now and a partial write means exactly what it looks like.
+   *
+   * Use `replaceAllPreferences` when the intent really is to replace.
    */
   async savePreferences(preferences: Partial<AppPreferences>): Promise<void> {
-    await AsyncStorage.setItem(STORAGE_KEYS.PREFERENCES, JSON.stringify(preferences));
+    const existing = await readStoredPreferences();
+    const merged = { ...existing, ...preferences };
+    await AsyncStorage.setItem(STORAGE_KEYS.PREFERENCES, JSON.stringify(merged));
   },
 
   /**
-   * Get preferences
+   * Replace the whole preferences blob.
+   *
+   * Only for importing a settings file, where keys absent from the import are
+   * meant to go back to their defaults rather than survive from this device.
+   * The schema version is preserved so an import never re-runs migrations
+   * that have already been applied.
+   */
+  async replaceAllPreferences(preferences: Partial<AppPreferences>): Promise<void> {
+    const existing = await readStoredPreferences();
+    const next: StoredPreferences = { ...(preferences as StoredPreferences) };
+    if (existing[SCHEMA_VERSION_KEY] !== undefined) {
+      next[SCHEMA_VERSION_KEY] = existing[SCHEMA_VERSION_KEY];
+    }
+    await AsyncStorage.setItem(STORAGE_KEYS.PREFERENCES, JSON.stringify(next));
+  },
+
+  /**
+   * Read preferences, migrating them first if they were written by an older
+   * schema — see utils/preference-migrations.ts.
+   *
+   * A migration that changes anything is written straight back, so the work
+   * happens once rather than on every read.
    */
   async getPreferences(): Promise<Partial<AppPreferences>> {
     try {
-      const data = await AsyncStorage.getItem(STORAGE_KEYS.PREFERENCES);
-      return data ? (JSON.parse(data) as Partial<AppPreferences>) : {};
+      const stored = await readStoredPreferences();
+      const { prefs, changed } = migratePreferences(stored);
+      if (changed) {
+        await AsyncStorage.setItem(STORAGE_KEYS.PREFERENCES, JSON.stringify(prefs)).catch(() => {
+          // The migrated values are still correct for this session; only the
+          // "migrate once" guarantee is lost, and it will retry next launch.
+        });
+      }
+      return prefs as Partial<AppPreferences>;
     } catch {
       return {};
     }
   },
 };
+
+/**
+ * The raw blob, with no migration applied.
+ *
+ * Anything that is not a JSON object — absent, corrupt, an array written by a
+ * bug — reads as empty rather than throwing, so one bad value can never stop
+ * the app from starting.
+ */
+async function readStoredPreferences(): Promise<StoredPreferences> {
+  try {
+    const data = await AsyncStorage.getItem(STORAGE_KEYS.PREFERENCES);
+    if (!data) return {};
+    const parsed: unknown = JSON.parse(data);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+    return parsed as StoredPreferences;
+  } catch {
+    return {};
+  }
+}

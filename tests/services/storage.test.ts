@@ -28,6 +28,7 @@ jest.mock('expo-secure-store', () => ({
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { storageService } from '@/services/storage';
+import { CURRENT_SCHEMA_VERSION, SCHEMA_VERSION_KEY } from '@/utils/preference-migrations';
 import type { ServerConfig } from '@/types/api';
 
 function makeServer(overrides: Partial<ServerConfig> = {}): ServerConfig {
@@ -301,21 +302,58 @@ describe('storageService', () => {
   });
 
   describe('preferences', () => {
+    // getPreferences stamps the schema version it migrated to, so assertions
+    // here compare the settings themselves rather than the whole blob.
+    const settings = (prefs: Record<string, unknown>) => {
+      const copy = { ...prefs };
+      delete copy[SCHEMA_VERSION_KEY];
+      return copy;
+    };
+
     it('saves and retrieves preferences', async () => {
       await storageService.savePreferences({ theme: 'dark' } as never);
       const prefs = await storageService.getPreferences();
-      expect(prefs).toEqual({ theme: 'dark' });
+      expect(settings(prefs)).toEqual({ theme: 'dark' });
+    });
+
+    // The whole point of the merge: a partial write used to replace the blob,
+    // so persisting one setting silently wiped every other one.
+    it('merges a partial write over what is already stored', async () => {
+      await storageService.savePreferences({ theme: 'dark', debugMode: true } as never);
+      await storageService.savePreferences({ debugMode: false } as never);
+
+      const prefs = await storageService.getPreferences();
+      expect(settings(prefs)).toEqual({ theme: 'dark', debugMode: false });
+    });
+
+    it('replaceAllPreferences drops keys absent from the new blob', async () => {
+      await storageService.savePreferences({ theme: 'dark', debugMode: true } as never);
+      await storageService.replaceAllPreferences({ debugMode: false } as never);
+
+      const prefs = await storageService.getPreferences();
+      expect(settings(prefs)).toEqual({ debugMode: false });
+    });
+
+    it('marks a stored blob with the current schema version', async () => {
+      await storageService.savePreferences({ theme: 'dark' } as never);
+      const prefs = (await storageService.getPreferences()) as Record<string, unknown>;
+      expect(prefs[SCHEMA_VERSION_KEY]).toBe(CURRENT_SCHEMA_VERSION);
     });
 
     it('returns {} when nothing stored', async () => {
       const prefs = await storageService.getPreferences();
-      expect(prefs).toEqual({});
+      expect(settings(prefs)).toEqual({});
     });
 
     it('returns {} and swallows errors', async () => {
       (AsyncStorage.getItem as jest.Mock).mockRejectedValueOnce(new Error('fail'));
       const prefs = await storageService.getPreferences();
-      expect(prefs).toEqual({});
+      expect(settings(prefs)).toEqual({});
+    });
+
+    it('survives a corrupt blob rather than throwing', async () => {
+      (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce('not json');
+      expect(settings(await storageService.getPreferences())).toEqual({});
     });
   });
 });

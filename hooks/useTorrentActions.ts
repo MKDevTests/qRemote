@@ -9,6 +9,7 @@ import { useToast } from '@/context/ToastContext';
 import { apiClient } from '@/services/api/client';
 import * as Clipboard from 'expo-clipboard';
 import { ActionMenuItemDef } from '@/components/ActionMenu';
+import { exportTorrentFile } from '@/services/torrent-export';
 
 export type ActionMenuItem = ActionMenuItemDef;
 
@@ -119,6 +120,20 @@ export function useTorrentActions(torrent: TorrentInfo | null) {
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : '';
       showToast(msg || t('errors.generic'), 'error');
+    }
+  }, [torrent, showToast, t]);
+
+  // The only way to get a .torrent back out of a torrent that was added from
+  // a magnet link — which is most of them. Deliberately not wrapped in the
+  // shared connection guard: the failure that matters here is the server
+  // refusing the export, and its message is more useful than a generic one.
+  const handleExportTorrent = useCallback(async () => {
+    if (!torrent) return;
+    try {
+      await exportTorrentFile(torrent.hash, torrent.name);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : '';
+      showToast(msg || t('toast.exportTorrentFailed'), 'error');
     }
   }, [torrent, showToast, t]);
 
@@ -338,6 +353,11 @@ export function useTorrentActions(torrent: TorrentInfo | null) {
         onPress: handleCopyMagnet,
       },
       {
+        label: t('actions.exportTorrent'),
+        icon: 'document-attach',
+        onPress: handleExportTorrent,
+      },
+      {
         label: t('common.delete'),
         icon: 'trash',
         onPress: handleDelete,
@@ -357,6 +377,7 @@ export function useTorrentActions(torrent: TorrentInfo | null) {
     handleVerifyData,
     handleReannounce,
     handleCopyMagnet,
+    handleExportTorrent,
     handleDelete,
     t,
   ]);
@@ -369,6 +390,7 @@ export function useTorrentActions(torrent: TorrentInfo | null) {
     handleVerifyData,
     handleReannounce,
     handleCopyMagnet,
+    handleExportTorrent,
     handleDelete,
     handleConfirmDelete,
     handleMaxPriority,

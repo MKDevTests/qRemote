@@ -138,7 +138,9 @@ export default function AdvancedSettingsScreen() {
         return;
       }
 
-      await storageService.savePreferences(importData.preferences);
+      // Replace, not merge: a key absent from the imported file is meant
+      // to go back to its default rather than survive from this device.
+      await storageService.replaceAllPreferences(importData.preferences);
 
       const existingServers = await ServerManager.getServers();
       const existingServerIds = new Set(existingServers.map((s) => s.id));

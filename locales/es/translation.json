@@ -363,7 +363,9 @@
         "addedTime": "Hora"
       },
       "searchAddOpensDialogue": "El + de búsqueda abre el diálogo",
-      "searchAddOpensDialogueHint": "Al tocar + en un resultado de búsqueda se abre el diálogo de añadir torrent en lugar de añadirlo directamente."
+      "searchAddOpensDialogueHint": "Al tocar + en un resultado de búsqueda se abre el diálogo de añadir torrent en lugar de añadirlo directamente.",
+      "dedupeSearchResults": "Fusionar resultados duplicados",
+      "dedupeSearchResultsHint": "Una fila por release cuando varios indexadores devuelven la misma, conservando la mejor sembrada"
     },
     "transfer": {
       "title": "Transferencia",
@@ -544,7 +546,8 @@
       "cartEmpty": "Aún no hay nada en cola",
       "cartClearAll": "Borrar todo",
       "cartCheckout": "Continuar ({{count}})",
-      "cartAccessibility": "Cola de adición, {{count}} torrent(s)"
+      "cartAccessibility": "Cola de adición, {{count}} torrent(s)",
+      "forgetTerm": "Olvidar «{{term}}»"
     },
     "rss": {
       "feedsTitle": "Feeds RSS",
@@ -716,7 +719,8 @@
     "uploadLimit": "Límite subida",
     "shareRatio": "Ratio de compartición",
     "globalSpeedLimit": "Límite de velocidad global ({{status}})",
-    "trackers": "Trackers"
+    "trackers": "Trackers",
+    "exportTorrent": "Exportar .torrent"
   },
   "alerts": {
     "deleteTorrent": "¿Eliminar torrent?",
@@ -1094,7 +1098,8 @@
     "serverNotFound": "Servidor no encontrado",
     "connectionFailedCheck": "Error de conexión. Comprueba tu configuración e intenta conectar manualmente.",
     "fileRenamed": "Archivo renombrado",
-    "folderRenamed": "Carpeta renombrada"
+    "folderRenamed": "Carpeta renombrada",
+    "exportTorrentFailed": "No se pudo exportar el archivo .torrent"
   },
   "errors": {
     "generic": "Ocurrió un error",

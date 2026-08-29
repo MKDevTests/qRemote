@@ -58,8 +58,9 @@ built on an endpoint that isn't there.
 
 **2. Will this break existing users?**
 The app has users with data on their devices. Anything that renames or changes
-the meaning of a stored key silently breaks them, and there is **no migration
-system**. Check against: preference keys (`types/preferences.ts`), `colors` keys
+the meaning of a stored key silently breaks them. Preferences now have a
+migration system (`utils/preference-migrations.ts`) — a rename is possible, but
+only *with* a migration appended to it. Check against: preference keys (`types/preferences.ts`), `colors` keys
 (ThemeContext), stored `ServerConfig` records, and saved color themes. Adding is
 safe; renaming and repurposing are not. See [§8 Critical Rules](#8-critical-rules).
 
@@ -457,7 +458,15 @@ Thin objects over `apiClient`.
   back the server-list export/import; import preserves this device's stored
   secrets when an id already exists.
 - **`storage.ts`** — AsyncStorage preferences (typed shape and defaults in
-  `types/preferences.ts`).
+  `types/preferences.ts`). `savePreferences` **merges** over what is stored, so
+  a partial write means what it looks like; `replaceAllPreferences` is the
+  explicit replace, used only by the settings import. Reads run
+  `utils/preference-migrations.ts` and write the result back.
+- **`torrent-export.ts`** — fetch a torrent's own `.torrent` via
+  `torrents/export`, write it to the app cache and hand it to the share sheet.
+  The only way to get a `.torrent` back out of a torrent added from a magnet.
+- **`search-history-storage.ts`** — the Search tab's recent terms, on their own
+  AsyncStorage key for the same reason the magnet basket has one.
 - **`magnet-basket-storage.ts`** — the magnet basket's own AsyncStorage key.
   Separate from `storage.ts` on purpose: preferences are small settings written
   whole, the basket is a working list. A failed read yields an empty basket
@@ -602,6 +611,19 @@ should download, now that releases ship one per ABI. Prefers a split matching
 `Device.supportedCpuArchitectures` in device preference order, falls back to a
 universal APK (what releases up to v4.2.0 attached), and returns null rather
 than offering the wrong ABI) ·
+`base64.ts` (`bytesToBase64` — Hermes has no Buffer and no reliable btoa, and
+expo-file-system writes binary as base64 text) ·
+`search-history.ts` (recent search terms: add/remove/parse, deduped
+case-insensitively, capped) ·
+`preference-migrations.ts` (`migratePreferences` — the schema-versioned
+migration chain for the preferences blob; append-only, a throwing step is
+skipped rather than taking the store down) ·
+`search-dedupe.ts` (`dedupeSearchResults` / `dedupedPrimaries` — collapse the
+same release reported by several indexers. qBittorrent concatenates plugin
+output without deduplicating, so this is the client's job. Keys on the
+normalised name only: plugins reconstruct sizes from scraped text, so two
+listings of one release routinely differ by megabytes. Best-seeded listing
+wins; behind the `dedupeSearchResults` preference) ·
 `save-paths.ts` (`getKnownSavePaths`, derived from live data — no API call) ·
 `file-sort.ts` (`sortTorrentFiles` — ordering for the torrent file browser.
 Not a flat `.sort()`: the browser injects a folder header the first time it
@@ -734,8 +756,9 @@ rather than a translation gap.
 1. **Never hardcode a color.** Always `useTheme()` → `colors.*`.
 2. **Never rename a key in the `colors` object.** Users' saved overrides are keyed
    by name in AsyncStorage; renaming silently breaks their customizations.
-3. **Never rename a preference key.** There is no migration system — old keys
-   just become orphaned.
+3. **Never rename a preference key without a migration.** `utils/preference-migrations.ts`
+   is how: append a migration, never renumber an existing one. Renaming without
+   one still orphans the old key on every install.
 4. **Color defaults mix formats** (rgb, rgba, hex) and the picker only handles
    6-digit hex. Changing an `rgba(...)` default to `#hex` drops the alpha channel
    and visibly changes the UI.

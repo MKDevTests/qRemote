@@ -24,7 +24,7 @@ import {
   NativeScrollEvent,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { useRouter, useNavigation, useLocalSearchParams } from 'expo-router';
+import { useRouter, useNavigation, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
@@ -34,6 +34,9 @@ import { ActionMenu, ActionMenuItemDef } from '@/components/ActionMenu';
 import { SearchCartModal } from '@/components/SearchCartModal';
 import { EmptyState } from '@/components/EmptyState';
 import { FilterChip } from '@/components/FilterChip';
+import { searchHistoryStorage } from '@/services/search-history-storage';
+import { addSearchTerm, removeSearchTerm } from '@/utils/search-history';
+import { dedupedPrimaries } from '@/utils/search-dedupe';
 import { useApiFeatures } from '@/context/ApiVersionContext';
 import { useServer } from '@/context/ServerContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -235,6 +238,8 @@ export default function SearchScreen() {
   const { jobId, status, results, total, isLoading, error, start, stop, reset } = useSearchJob();
 
   const [query, setQuery] = useState('');
+  const [history, setHistory] = useState<string[]>([]);
+  const [dedupeEnabled, setDedupeEnabled] = useState(true);
   const [plugin, setPlugin] = useState<string>(ALL);
   const [category, setCategory] = useState<string>(ALL);
   const [selectedTrackers, setSelectedTrackers] = useState<Set<string>>(new Set());
@@ -390,7 +395,12 @@ export default function SearchScreen() {
       selectedTrackers.size === 0
         ? deduped
         : deduped.filter((r) => selectedTrackers.has(resultTrackerLabel(r, isAggregatedSource)));
-    filtered.sort((a, b) => {
+    // Release-level collapse, after the tracker filter so the listing that
+    // survives is one the user chose to see. The fileUrl pass above only
+    // catches byte-identical URLs; this catches the same release reported by
+    // five indexers under five slightly different names.
+    const collapsed = dedupeEnabled ? dedupedPrimaries(filtered) : filtered;
+    collapsed.sort((a, b) => {
       let cmp = 0;
       switch (sortBy) {
         case 'seeders':
@@ -418,8 +428,8 @@ export default function SearchScreen() {
       }
       return sortDirection === 'asc' ? cmp : -cmp;
     });
-    return filtered;
-  }, [results, selectedTrackers, isAggregatedSource, sortBy, sortDirection]);
+    return collapsed;
+  }, [results, selectedTrackers, isAggregatedSource, sortBy, sortDirection, dedupeEnabled]);
 
   // The FlatList unmounts whenever the (filtered) result set is empty — the
   // empty state has no scrollable surface, so no onScroll event could ever
@@ -440,6 +450,40 @@ export default function SearchScreen() {
 
   // ────────────────────────────────────────────────── actions ──────────────
 
+  useEffect(() => {
+    let cancelled = false;
+    searchHistoryStorage.load().then((stored) => {
+      if (!cancelled) setHistory(stored);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Re-read on focus, not just on mount: this screen stays mounted across tab
+  // switches, so a toggle flipped in Settings would otherwise not apply until
+  // the app restarts.
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      storageService.getPreferences().then((prefs) => {
+        if (!cancelled) setDedupeEnabled(prefs.dedupeSearchResults !== false);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }, []),
+  );
+
+  const forgetSearchTerm = useCallback((term: string) => {
+    haptics.selection();
+    setHistory((current) => {
+      const next = removeSearchTerm(current, term);
+      void searchHistoryStorage.save(next);
+      return next;
+    });
+  }, []);
+
   const runSearch = useCallback(
     async (pattern: string) => {
       if (!pattern) return;
@@ -447,6 +491,14 @@ export default function SearchScreen() {
         showToast(t('toast.notConnected'), 'error');
         return;
       }
+      // Recorded before the search runs, not after: a search that errors or
+      // returns nothing is exactly the one worth re-running from a chip.
+      setHistory((current) => {
+        const next = addSearchTerm(current, pattern);
+        void searchHistoryStorage.save(next);
+        return next;
+      });
+
       // Dismiss the keyboard so results have full screen space.
       Keyboard.dismiss();
       haptics.medium();
@@ -934,6 +986,56 @@ export default function SearchScreen() {
                 </TouchableOpacity>
               </View>
 
+              {/* Recent searches. Only while the field is empty: once you are
+                  typing, the chips are competing with what you are writing. */}
+              {history.length > 0 && query.length === 0 && (
+                <View style={styles.filterRow}>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.filterRowContainer}
+                  >
+                    <Ionicons
+                      name="time-outline"
+                      size={16}
+                      color={colors.textSecondary}
+                      style={styles.historyIcon}
+                    />
+                    {history.map((term) => (
+                      <TouchableOpacity
+                        key={term}
+                        style={[
+                          styles.historyChip,
+                          { backgroundColor: colors.surface, borderColor: colors.surfaceOutline },
+                        ]}
+                        onPress={() => {
+                          setQuery(term);
+                          runSearch(term);
+                        }}
+                        onLongPress={() => forgetSearchTerm(term)}
+                        delayLongPress={350}
+                        activeOpacity={0.7}
+                        accessibilityLabel={term}
+                      >
+                        <Text
+                          style={[styles.historyChipText, { color: colors.text }]}
+                          numberOfLines={1}
+                        >
+                          {term}
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => forgetSearchTerm(term)}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          accessibilityLabel={t('screens.search.forgetTerm', { term })}
+                        >
+                          <Ionicons name="close" size={13} color={colors.textSecondary} />
+                        </TouchableOpacity>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+
               {/* Plugin chip row */}
               <View style={styles.filterRow}>
                 <ScrollView
@@ -1325,6 +1427,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: spacing.xs,
+  },
+  historyIcon: {
+    alignSelf: 'center',
+    marginRight: spacing.xs,
+  },
+  historyChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    maxWidth: 200,
+    paddingVertical: 6,
+    paddingHorizontal: spacing.sm,
+    marginRight: spacing.xs,
+    borderRadius: borderRadius.full,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  historyChipText: {
+    ...typography.caption,
+    flexShrink: 1,
   },
   filterRowContainer: {
     flexDirection: 'row',

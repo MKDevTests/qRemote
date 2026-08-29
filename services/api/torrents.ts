@@ -94,6 +94,16 @@ export const torrentsApi = {
   /**
    * Get torrent pieces' states
    */
+  /**
+   * The raw `.torrent` file for a torrent already in the client.
+   *
+   * `torrents/export` has existed since WebAPI 2.0, so no version gate. It
+   * answers with the bencoded file itself, not JSON — hence getBinary.
+   */
+  async exportTorrent(hash: string): Promise<Uint8Array> {
+    return apiClient.getBinary(`/api/${API_VERSION}/torrents/export`, { hash });
+  },
+
   async getTorrentPiecesStates(hash: string): Promise<TorrentPieceState> {
     return (await apiClient.get(`/api/${API_VERSION}/torrents/pieceStates`, {
       hash,
