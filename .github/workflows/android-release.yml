@@ -156,7 +156,10 @@ jobs:
           # -x lintVital*: Android Lint on the release variant costs minutes and
           #   adds nothing here — tsc, jest and ESLint already ran, and every one
           #   of them gates the build above.
-          ./gradlew assembleRelease --no-daemon --build-cache             -x lintVitalAnalyzeRelease -x lintVitalReportRelease -x lintVitalRelease
+          # 6 GB: a GitHub-hosted ubuntu runner has 16 GB, and the 2 GB the Expo
+          # template ships is what killed the first v4.2.0 attempt with "Java
+          # heap space" after 55 minutes of GC thrash.
+          ./gradlew assembleRelease --no-daemon --build-cache             -Dorg.gradle.jvmargs="-Xmx6144m -XX:MaxMetaspaceSize=1024m"             -x lintVitalAnalyzeRelease -x lintVitalReportRelease -x lintVitalRelease
 
       # Mirrors verify_release_apk in scripts/build-qremote-release.sh. An APK
       # with the wrong version, or one that is debuggable, must never reach a

@@ -70,7 +70,17 @@ const ANDROID_ARCHITECTURES = 'arm64-v8a,armeabi-v7a';
  * unchanged task is replayed from `~/.gradle/caches/build-cache-1` instead.
  * (`org.gradle.parallel` is already true in the template.)
  */
-const EXTRA_GRADLE_PROPERTIES = [['org.gradle.caching', 'true']];
+const EXTRA_GRADLE_PROPERTIES = [
+  ['org.gradle.caching', 'true'],
+  // The template ships -Xmx2048m, which is not enough to link React Native's
+  // release build with parallel workers: the first v4.2.0 CI run spent 55
+  // minutes thrashing the collector and then died with "Java heap space". The
+  // build scripts had always overridden this on the command line — which is
+  // why local releases worked while CI did not — so the fix is to put the
+  // working value where every caller sees it. 4 GB is what those scripts have
+  // used successfully; CI raises it further, its runner having 16 GB.
+  ['org.gradle.jvmargs', '-Xmx4096m -XX:MaxMetaspaceSize=1024m'],
+];
 
 const SIGNING_CONFIG = `
         qremoteRelease {
