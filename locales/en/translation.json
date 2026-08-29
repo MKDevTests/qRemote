@@ -1187,5 +1187,23 @@
     "failedToLoadServer": "Failed to load server",
     "crashTitle": "Something went wrong",
     "crashMessage": "qRemote ran into an unexpected error. Your servers and settings are safe."
+  },
+  "updates": {
+    "title": "Updates",
+    "check": "Check for updates",
+    "checking": "Checking…",
+    "currentVersion": "Installed: {{version}}",
+    "upToDate": "You're on the latest version ({{version}})",
+    "available": "Version {{version}} available",
+    "noApk": "Release {{version}} has no Android APK attached",
+    "downloadAndInstall": "Download & install",
+    "install": "Install",
+    "downloading": "Downloading…",
+    "downloadingPercent": "Downloading… {{percent}}%",
+    "viewOnGitHub": "View on GitHub",
+    "errorNetwork": "Could not reach GitHub",
+    "errorRateLimited": "GitHub rate limit reached — try again later",
+    "errorDownload": "Download failed",
+    "errorInstall": "Could not start the installer"
   }
 }

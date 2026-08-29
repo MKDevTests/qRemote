@@ -15,11 +15,19 @@ const sanitizeFileName = (name: string): string =>
  * launch — that access can lapse before the file is ever read. Copying
  * immediately, before any further delay, gives us a stable app-owned URI to
  * upload from instead.
+ *
+ * Android's content:// URIs need the same treatment for a different reason:
+ * the read permission they carry is granted to the *activity that received
+ * the intent* and is revoked when that activity finishes. A URI held across a
+ * relaunch, or read after the sending app has moved on, fails with a security
+ * exception — and the upload path has no way to recover. It is also not a
+ * plain filesystem path, so anything downstream that expects one breaks on it.
+ * Copying resolves both at once.
  */
 export async function persistIncomingTorrentFile(
   file: IncomingTorrentFile,
 ): Promise<IncomingTorrentFile | null> {
-  if (!file.uri.startsWith('file://')) {
+  if (!file.uri.startsWith('file://') && !file.uri.startsWith('content://')) {
     return file;
   }
 

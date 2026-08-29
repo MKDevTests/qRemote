@@ -1,7 +1,14 @@
 # AGENTS.md
 
-qRemote is an iOS-only React Native (Expo SDK 57) app for remotely controlling
+qRemote is a React Native (Expo SDK 57) app for remotely controlling
 qBittorrent servers over the WebUI API v2.
+
+**This is the MKDevTests fork.** Upstream (`taylorcox75/qRemote`) is iOS-only;
+this fork adds an Android target and ships it through GitHub releases with an
+in-app updater. Both platforms build from the same JS. Anything Android — build
+scripts, signing, intent filters, the updater — is documented in
+[docs/ANDROID.md](docs/ANDROID.md); read it before touching `app.config.js`'s
+`android` block, `plugins/withAndroidBuildTweaks.js`, or `scripts/`.
 
 Read this file top to bottom once. The **File Index** is a complete map — trust
 it instead of re-exploring, and open only the files you're actually changing.
@@ -151,32 +158,40 @@ before.
 
 ### Branches — always work on one
 
-**Never commit to `main`. Never commit to `develop`.** Both are protected by
-convention: work reaches them only through a PR. There is no exception for a
-one-line fix or a "quick" change.
+**Never commit to `main`.** It is protected by convention: work reaches it only
+through a PR. There is no exception for a one-line fix or a "quick" change.
 
-Every change starts on its own branch cut from `develop`:
+Every change starts on its own branch cut from `main`:
 
 ```bash
-git switch develop && git pull && git switch -c bugfix/#123-short-description
+git switch main && git pull && git switch -c bugfix/#123-short-description
 ```
 
 Naming follows what's already in the repo — `feature/…`, `bugfix/…`, or `fix/…`,
 usually carrying the issue number (`bugfix/#177`, `feature/#121`). Agent-created
 branches use a `claude/…` prefix.
 
-**Always cut from `develop` — there is no hotfix exception.** However urgent a
-fix is, it goes branch → PR → `develop` → `main`. Never branch from `main`, and
-never shortcut a fix straight into it.
+> **This fork has no `develop`.** Upstream's docs describe a
+> branch → `develop` → `main` chain, but `develop` does not exist here and
+> `git switch develop` fails. The extra integration layer earns nothing on a
+> single-maintainer fork whose releases are cut by a local script, so branches
+> merge straight into `main` by PR. If you ever see instructions elsewhere in
+> this file referring to `develop`, they are upstream leftovers — report them.
 
 | Branch | Role |
 |---|---|
-| *your branch* | Where every commit goes. Cut from `develop`, merged back by PR. |
-| `develop` | Integration branch. Receives work by PR only. Its changelog entry is a `.TESTFLIGHT` placeholder — see [docs/RELEASING.md](docs/RELEASING.md). |
-| `main` | Release branch. Receives `develop` by PR. **Pushing it with `"easBuild": true` in `package.json` builds and submits to the App Store** — see [docs/RELEASING.md](docs/RELEASING.md). |
+| *your branch* | Where every commit goes. Cut from `main`, merged back by PR. |
+| `main` | Release branch. Android releases are cut from it with `scripts/release-qremote.sh` — see [docs/ANDROID.md](docs/ANDROID.md). |
+| `coverage` | Machine-written. The `coverage.yml` workflow force-pushes the README badge's `badge.json` here. Never branch from it or commit to it by hand. |
+
+> The upstream `"easBuild": true` App Store pipeline does **not** exist in this
+> fork: `.github/workflows/ios-deploy.yml` was removed (no Apple/EAS credentials
+> here) and the `updates` / `extra.eas` blocks were dropped from `app.config.js`
+> so a build can never pull upstream's OTA bundle. `package.json` still carries
+> the inert `easBuild` key; leave it alone rather than repurposing it.
 
 **Commit and push only when asked.** If you're asked to commit and you're sitting
-on `main` or `develop`, branch first, then commit — don't ask whether the rule
+on `main`, branch first, then commit — don't ask whether the rule
 applies this time.
 
 ### When asked to commit, go all the way to a PR
@@ -187,7 +202,7 @@ applies this time.
 2. Branch if you aren't already on one.
 3. Commit. **No `Co-Authored-By: Claude` trailer** on this repo.
 4. `git push -u origin <branch>`
-5. `gh pr create --base develop` with a short summary and a test-plan line
+5. `gh pr create --base main` with a short summary and a test-plan line
    covering what you ran.
 
 Stop there. **Never merge the PR** — review and merge are the user's.
@@ -390,7 +405,9 @@ All PascalCase function components taking a `…Props` interface.
 - **Visuals** — `SpeedGraph`, `CircularProgress`, `AnimatedProgressBar`,
   `AnimatedButton`, `Confetti`.
 - **Chrome / diagnostics** — `FocusAwareStatusBar`, `SettingRow`,
-  `QuickConnectPanel`, `LogViewer`, `DebugRow`, `SuperDebugPanel`.
+  `QuickConnectPanel`, `LogViewer`, `DebugRow`, `SuperDebugPanel`,
+  `UpdateSection` (the Android Updates card on the About screen; renders
+  nothing on iOS — backed by `services/updater.ts`).
 
 ### API wrappers (`services/api/`)
 
@@ -421,7 +438,12 @@ Thin objects over `apiClient`.
 - **`storage.ts`** — AsyncStorage preferences (typed shape and defaults in
   `types/preferences.ts`).
 - **`incoming-file.ts`** — copies an incoming `.torrent` into the app cache
-  before the iOS security-scoped access can lapse.
+  before iOS's security-scoped access, or Android's per-activity `content://`
+  read grant, can lapse.
+- **`updater.ts`** — Android in-app updates from GitHub releases (check the
+  latest tag, download the `.apk`, fire `ACTION_INSTALL_PACKAGE`). Reads
+  `extra.githubRepo` from `app.config.js`. No-ops on iOS. See
+  [docs/ANDROID.md](docs/ANDROID.md).
 - **`query-client.ts`** — the shared TanStack `QueryClient`.
 - **`color-theme-manager.ts`** — save/load/apply user color themes.
 - **`connectivity-log.ts`** — in-memory ring log (`clogDebug/Info/Warn/Error(tag, msg)`).
@@ -441,6 +463,23 @@ Thin objects over `apiClient`.
   challenge (Basic Auth, client cert) falls through to default handling
   unchanged. iOS only; requires `npm run xcode` to pick up (new native code,
   not just a generated-file patch).
+
+### Build tooling (`plugins/`, `scripts/`)
+
+- **`plugins/withNativeTorrentFileCopy.js`** — iOS `withAppDelegate` mod;
+  copies an incoming `.torrent` natively inside the open-URL callback.
+- **`plugins/withAndroidBuildTweaks.js`** — Android `withAppBuildGradle` mod:
+  a `.debug` `applicationIdSuffix` (side-by-side installs) and a release
+  signing config that points *outside* the generated tree, so the signature is
+  stable across prebuilds. Throws at prebuild time if the RN template's
+  anchors move.
+- **`scripts/_android-env.sh`** — shared: SDK detection, `local.properties`
+  (forward slashes — see the file), Gradle JVM args (the Windows TLS-inspection
+  workaround), prebuild-freshness check, `adb` resolution and install.
+- **`scripts/build-qremote-debug.sh`** / **`build-qremote-release.sh`** —
+  build + install. Release verifies `versionName` and refuses a debuggable APK.
+- **`scripts/release-qremote.sh`** — bump `package.json` → build → verify →
+  commit → tag → push → `gh release create`. Rolls back on any pre-push failure.
 
 ### Hooks (`hooks/`)
 
@@ -638,15 +677,23 @@ rather than a translation gap.
 
 ## 9. Environment & Headless Agents
 
-- **iOS-only.** iOS-specific APIs (`ActionSheetIOS`, `Alert.prompt`, …) are fine
-  without platform gating.
+- **Two platforms now.** iOS-specific APIs (`ActionSheetIOS`, `Alert.prompt`, …)
+  still appear un-gated in existing code — that is upstream's legacy, not a
+  pattern to copy. **New** platform-specific code must be gated on
+  `Platform.OS`, and anything that only works on one platform must degrade to a
+  visible no-op rather than a control that silently lies (the per-server
+  "allow self-signed certificate" toggle is the current example of the latter —
+  see docs/ANDROID.md "Known Android gaps").
 - **`expo-*` packages are pre-approved**, even ones needing `expo-dev-client`.
   Third-party native modules (e.g. `react-native-ios-context-menu`,
   `lottie-react-native`) need explicit approval first.
-- **Don't run the app.** It needs a device or simulator via Xcode, which is the
-  user's to drive. **Never start the web target** (`npm run web`) either — there
-  is no qBittorrent server configured for an agent to talk to, so it proves
-  nothing.
+- **Don't run the app.** It needs a device, or a simulator via Xcode, which is
+  the user's to drive. **Never start the web target** (`npm run web`) either —
+  there is no qBittorrent server configured for an agent to talk to, so it
+  proves nothing.
+- **An Android build is ~40 minutes cold** (`scripts/build-qremote-*.sh`). Run
+  one only when the user asks for an APK, never to "check" a JS change — `tsc`
+  and `npm test` cover that in seconds.
 - **Verify with `npx tsc --noEmit` and `npm test`** instead, batched at commit
   time per [§1](#1-working-agreement). The bar is exit 0, tests passing, lint 0
   errors.

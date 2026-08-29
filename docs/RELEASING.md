@@ -1,5 +1,19 @@
 # Releasing & Changelog
 
+> ## ⚠️ Inherited from upstream — the pipeline below does not run in this fork
+>
+> Everything about EAS builds, TestFlight, the App Store, the `easBuild` flag,
+> `develop`, and `.TESTFLIGHT` placeholder versions describes
+> `taylorcox75/qRemote`. This fork has no Apple or EAS credentials,
+> `.github/workflows/ios-deploy.yml` was removed, and `develop` does not exist.
+> **Pushing `main` here ships nothing to anyone.**
+>
+> To actually cut a release, see **[ANDROID.md](ANDROID.md)** —
+> `scripts/release-qremote.sh` does the whole thing.
+>
+> This file is kept for the changelog conventions in it, and as a reference for
+> anyone re-attaching an iOS pipeline later. Read it with that caveat in mind.
+
 Reference for cutting a release and for editing the changelog. **Read this file
 when you need it** — it is deliberately kept out of `AGENTS.md` so it doesn't
 occupy context in every session.
@@ -7,7 +21,8 @@ occupy context in every session.
 `AGENTS.md` keeps only the two guardrails that must always be in force:
 
 - Never edit `constants/changelog.ts` unless the user explicitly asks.
-- Pushing `main` with `"easBuild": true` ships to the App Store.
+- Pushing `main` with `"easBuild": true` ships to the App Store. *(Upstream
+  only — inert here, see the banner above.)*
 
 Everything below is the *how*.
 

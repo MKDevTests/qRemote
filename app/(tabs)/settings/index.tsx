@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   Animated,
   Linking,
+  Platform,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -371,13 +372,13 @@ export default function SettingsScreen() {
             <ExternalRow
               icon="logo-github"
               label={t('screens.settings.sourceCode')}
-              onPress={() => Linking.openURL('https://github.com/taylorcox75/qremote')}
+              onPress={() => Linking.openURL('https://github.com/MKDevTests/qRemote')}
               colors={colors}
             />
             <ExternalRow
               icon="bug-outline"
               label={t('screens.settings.reportIssue')}
-              onPress={() => Linking.openURL('https://github.com/taylorcox75/qRemote/issues')}
+              onPress={() => Linking.openURL('https://github.com/MKDevTests/qRemote/issues')}
               colors={colors}
             />
             <ExternalRow
@@ -390,14 +391,18 @@ export default function SettingsScreen() {
               }
               colors={colors}
             />
-            <ExternalRow
-              description={t('screens.settings.rateAppHint')}
-              onPress={handleRate}
-              colors={colors}
-              trailing="stars"
-              icon="thumbs-up-outline"
-              isLast
-            />
+            {/* App Store review page — this build is not on the App Store on
+                Android, so the row would open a page about a different app. */}
+            {Platform.OS === 'ios' && (
+              <ExternalRow
+                description={t('screens.settings.rateAppHint')}
+                onPress={handleRate}
+                colors={colors}
+                trailing="stars"
+                icon="thumbs-up-outline"
+                isLast
+              />
+            )}
           </View>
         </View>
 

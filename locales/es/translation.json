@@ -1187,5 +1187,23 @@
     "stalledUp": "Stalled UP",
     "allocating": "Allocating",
     "moving": "Moving"
+  },
+  "updates": {
+    "title": "Actualizaciones",
+    "check": "Buscar actualizaciones",
+    "checking": "Comprobando…",
+    "currentVersion": "Instalada: {{version}}",
+    "upToDate": "Tienes la última versión ({{version}})",
+    "available": "Versión {{version}} disponible",
+    "noApk": "La versión {{version}} no adjunta ningún APK de Android",
+    "downloadAndInstall": "Descargar e instalar",
+    "install": "Instalar",
+    "downloading": "Descargando…",
+    "downloadingPercent": "Descargando… {{percent}} %",
+    "viewOnGitHub": "Ver en GitHub",
+    "errorNetwork": "No se pudo contactar con GitHub",
+    "errorRateLimited": "Límite de peticiones de GitHub alcanzado — inténtalo más tarde",
+    "errorDownload": "Error en la descarga",
+    "errorInstall": "No se pudo iniciar la instalación"
   }
 }

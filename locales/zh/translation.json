@@ -1187,5 +1187,23 @@
     "stalledUp": "Stalled UP",
     "allocating": "Allocating",
     "moving": "Moving"
+  },
+  "updates": {
+    "title": "更新",
+    "check": "检查更新",
+    "checking": "正在检查…",
+    "currentVersion": "已安装：{{version}}",
+    "upToDate": "已是最新版本（{{version}}）",
+    "available": "有新版本 {{version}}",
+    "noApk": "版本 {{version}} 未附带 Android APK",
+    "downloadAndInstall": "下载并安装",
+    "install": "安装",
+    "downloading": "正在下载…",
+    "downloadingPercent": "正在下载… {{percent}}%",
+    "viewOnGitHub": "在 GitHub 上查看",
+    "errorNetwork": "无法连接 GitHub",
+    "errorRateLimited": "GitHub 请求过于频繁，请稍后再试",
+    "errorDownload": "下载失败",
+    "errorInstall": "无法启动安装程序"
   }
 }

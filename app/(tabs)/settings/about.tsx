@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme, ThemeColors } from '@/context/ThemeContext';
 import { useServer } from '@/context/ServerContext';
 import { FocusAwareStatusBar } from '@/components/FocusAwareStatusBar';
+import { UpdateSection } from '@/components/UpdateSection';
 import { applicationApi } from '@/services/api/application';
 import { APP_VERSION } from '@/utils/version';
 import { ApplicationVersion, BuildInfo } from '@/types/api';
@@ -131,6 +132,9 @@ export default function AboutScreen() {
               />
             </View>
           </View>
+
+          {/* Android in-app updates (renders nothing on iOS) */}
+          <UpdateSection />
 
           {/* qBittorrent Server Info */}
           {isConnected && (

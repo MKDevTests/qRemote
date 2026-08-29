@@ -1187,5 +1187,23 @@
     "stalledUp": "Stalled UP",
     "allocating": "Allocating",
     "moving": "Moving"
+  },
+  "updates": {
+    "title": "Updates",
+    "check": "Nach Updates suchen",
+    "checking": "Wird geprüft…",
+    "currentVersion": "Installiert: {{version}}",
+    "upToDate": "Du hast die neueste Version ({{version}})",
+    "available": "Version {{version}} verfügbar",
+    "noApk": "Release {{version}} enthält kein Android-APK",
+    "downloadAndInstall": "Herunterladen und installieren",
+    "install": "Installieren",
+    "downloading": "Wird heruntergeladen…",
+    "downloadingPercent": "Wird heruntergeladen… {{percent}} %",
+    "viewOnGitHub": "Auf GitHub ansehen",
+    "errorNetwork": "GitHub nicht erreichbar",
+    "errorRateLimited": "GitHub-Anfragelimit erreicht — später erneut versuchen",
+    "errorDownload": "Download fehlgeschlagen",
+    "errorInstall": "Installation konnte nicht gestartet werden"
   }
 }
