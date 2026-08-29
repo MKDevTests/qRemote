@@ -61,7 +61,7 @@ if [[ $CLEAN == 1 ]]; then
 fi
 
 echo "==> Building debug APK"
-./gradlew :app:assembleDebug -Dorg.gradle.jvmargs="$JVM_ARGS"
+./gradlew :app:assembleDebug -Dorg.gradle.jvmargs="$JVM_ARGS" --build-cache
 
 cd "$REPO_ROOT"
 APK="android/app/build/outputs/apk/debug/app-debug.apk"

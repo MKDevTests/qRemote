@@ -58,6 +58,20 @@ const path = require('path');
 /** The ABIs any real Android phone actually uses. */
 const ANDROID_ARCHITECTURES = 'arm64-v8a,armeabi-v7a';
 
+/**
+ * Gradle settings the Expo template does not set, appended to
+ * android/gradle.properties.
+ *
+ * `org.gradle.caching` is the one that matters. The build compiles React
+ * Native's C++ for two ABIs, which is nearly all of the ~17 minutes a release
+ * takes, and without the build cache every one of those tasks is redone from
+ * scratch on every build — locally after any `expo prebuild`, and on CI on
+ * every run, since `android/` is generated and never committed. With it, an
+ * unchanged task is replayed from `~/.gradle/caches/build-cache-1` instead.
+ * (`org.gradle.parallel` is already true in the template.)
+ */
+const EXTRA_GRADLE_PROPERTIES = [['org.gradle.caching', 'true']];
+
 const SIGNING_CONFIG = `
         qremoteRelease {
             // Prefer -P properties, then env vars, then the machine's Android
@@ -127,6 +141,21 @@ function withArmOnlyArchitectures(config) {
       );
     }
     entry.value = ANDROID_ARCHITECTURES;
+    return cfg;
+  });
+}
+
+/** Append the properties above, leaving any existing value alone. */
+function withExtraGradleProperties(config) {
+  return withGradleProperties(config, (cfg) => {
+    for (const [key, value] of EXTRA_GRADLE_PROPERTIES) {
+      const existing = cfg.modResults.find((item) => item.type === 'property' && item.key === key);
+      if (existing) {
+        existing.value = value;
+      } else {
+        cfg.modResults.push({ type: 'property', key, value });
+      }
+    }
     return cfg;
   });
 }
@@ -202,5 +231,7 @@ function withDebugAppName(config) {
 }
 
 module.exports = function withAndroidBuildTweaks(config) {
-  return withDebugAppName(withArmOnlyArchitectures(withBuildGradleTweaks(config)));
+  return withDebugAppName(
+    withExtraGradleProperties(withArmOnlyArchitectures(withBuildGradleTweaks(config))),
+  );
 };
