@@ -363,7 +363,9 @@
         "addedTime": "Heure"
       },
       "searchAddOpensDialogue": "Le + de la recherche ouvre la boîte de dialogue",
-      "searchAddOpensDialogueHint": "Appuyer sur + sur un résultat de recherche ouvre la boîte de dialogue d'ajout au lieu d'ajouter directement."
+      "searchAddOpensDialogueHint": "Appuyer sur + sur un résultat de recherche ouvre la boîte de dialogue d'ajout au lieu d'ajouter directement.",
+      "dedupeSearchResults": "Fusionner les doublons",
+      "dedupeSearchResultsHint": "Une ligne par release quand plusieurs indexeurs renvoient la même, en gardant la mieux sourcée"
     },
     "transfer": {
       "title": "Transfert",

@@ -611,6 +611,12 @@ than offering the wrong ABI) ·
 expo-file-system writes binary as base64 text) ·
 `search-history.ts` (recent search terms: add/remove/parse, deduped
 case-insensitively, capped) ·
+`search-dedupe.ts` (`dedupeSearchResults` / `dedupedPrimaries` — collapse the
+same release reported by several indexers. qBittorrent concatenates plugin
+output without deduplicating, so this is the client's job. Keys on the
+normalised name only: plugins reconstruct sizes from scraped text, so two
+listings of one release routinely differ by megabytes. Best-seeded listing
+wins; behind the `dedupeSearchResults` preference) ·
 `save-paths.ts` (`getKnownSavePaths`, derived from live data — no API call) ·
 `file-sort.ts` (`sortTorrentFiles` — ordering for the torrent file browser.
 Not a flat `.sort()`: the browser injects a folder header the first time it

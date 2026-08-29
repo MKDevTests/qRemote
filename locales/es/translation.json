@@ -363,7 +363,9 @@
         "addedTime": "Hora"
       },
       "searchAddOpensDialogue": "El + de búsqueda abre el diálogo",
-      "searchAddOpensDialogueHint": "Al tocar + en un resultado de búsqueda se abre el diálogo de añadir torrent en lugar de añadirlo directamente."
+      "searchAddOpensDialogueHint": "Al tocar + en un resultado de búsqueda se abre el diálogo de añadir torrent en lugar de añadirlo directamente.",
+      "dedupeSearchResults": "Fusionar resultados duplicados",
+      "dedupeSearchResultsHint": "Una fila por release cuando varios indexadores devuelven la misma, conservando la mejor sembrada"
     },
     "transfer": {
       "title": "Transferencia",

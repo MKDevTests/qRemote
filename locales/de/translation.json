@@ -363,7 +363,9 @@
         "addedTime": "Uhrzeit"
       },
       "searchAddOpensDialogue": "+ in der Suche öffnet den Dialog",
-      "searchAddOpensDialogueHint": "Ein Tippen auf + bei einem Suchergebnis öffnet den Torrent-Hinzufügen-Dialog, statt sofort hinzuzufügen."
+      "searchAddOpensDialogueHint": "Ein Tippen auf + bei einem Suchergebnis öffnet den Torrent-Hinzufügen-Dialog, statt sofort hinzuzufügen.",
+      "dedupeSearchResults": "Doppelte Treffer zusammenführen",
+      "dedupeSearchResultsHint": "Eine Zeile pro Release, wenn mehrere Indexer dasselbe melden — die mit den meisten Seeds bleibt"
     },
     "transfer": {
       "title": "Übertragung",

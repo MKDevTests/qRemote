@@ -170,6 +170,13 @@ export interface AppPreferences {
   /** Auto-tag torrents added from Search with the result's tracker/indexer label (not categorization) */
   autoCategorizeByTracker: boolean;
 
+  /**
+   * Collapse Search results that are the same release found by several
+   * indexers — see utils/search-dedupe.ts. On by default: qBittorrent
+   * concatenates plugin output without deduplicating anything.
+   */
+  dedupeSearchResults: boolean;
+
   /** When enabled, the add-torrent button opens the full add-torrent screen */
   useFullAddTorrentDialogue: boolean;
 
@@ -234,6 +241,7 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
   autoRefreshInterval: 1000,
   hasCompletedOnboarding: false,
   autoCategorizeByTracker: false,
+  dedupeSearchResults: true,
   useFullAddTorrentDialogue: false,
   searchAddOpensDialogue: true,
   addTorrentDialogueFields: {

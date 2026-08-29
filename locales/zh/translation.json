@@ -363,7 +363,9 @@
         "addedTime": "时间"
       },
       "searchAddOpensDialogue": "搜索中的 + 打开对话框",
-      "searchAddOpensDialogueHint": "点击搜索结果上的 + 将打开添加种子对话框，而不是直接添加。"
+      "searchAddOpensDialogueHint": "点击搜索结果上的 + 将打开添加种子对话框，而不是直接添加。",
+      "dedupeSearchResults": "合并重复结果",
+      "dedupeSearchResultsHint": "多个索引器返回同一发布时只显示一行，保留做种数最多的"
     },
     "transfer": {
       "title": "传输",

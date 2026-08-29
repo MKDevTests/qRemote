@@ -384,7 +384,9 @@
         "addedTime": ""
       },
       "searchAddOpensDialogue": "Search + opens dialogue",
-      "searchAddOpensDialogueHint": "Tapping + on a search result opens the add-torrent dialogue instead of adding straight away."
+      "searchAddOpensDialogueHint": "Tapping + on a search result opens the add-torrent dialogue instead of adding straight away.",
+      "dedupeSearchResults": "Merge duplicate results",
+      "dedupeSearchResultsHint": "One row per release when several indexers report the same one, keeping the best-seeded"
     },
     "transfer": {
       "title": "Transfer",
