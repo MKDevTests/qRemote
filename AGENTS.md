@@ -458,6 +458,11 @@ Thin objects over `apiClient`.
   secrets when an id already exists.
 - **`storage.ts`** — AsyncStorage preferences (typed shape and defaults in
   `types/preferences.ts`).
+- **`torrent-export.ts`** — fetch a torrent's own `.torrent` via
+  `torrents/export`, write it to the app cache and hand it to the share sheet.
+  The only way to get a `.torrent` back out of a torrent added from a magnet.
+- **`search-history-storage.ts`** — the Search tab's recent terms, on their own
+  AsyncStorage key for the same reason the magnet basket has one.
 - **`magnet-basket-storage.ts`** — the magnet basket's own AsyncStorage key.
   Separate from `storage.ts` on purpose: preferences are small settings written
   whole, the basket is a working list. A failed read yields an empty basket
@@ -602,6 +607,10 @@ should download, now that releases ship one per ABI. Prefers a split matching
 `Device.supportedCpuArchitectures` in device preference order, falls back to a
 universal APK (what releases up to v4.2.0 attached), and returns null rather
 than offering the wrong ABI) ·
+`base64.ts` (`bytesToBase64` — Hermes has no Buffer and no reliable btoa, and
+expo-file-system writes binary as base64 text) ·
+`search-history.ts` (recent search terms: add/remove/parse, deduped
+case-insensitively, capped) ·
 `save-paths.ts` (`getKnownSavePaths`, derived from live data — no API call) ·
 `file-sort.ts` (`sortTorrentFiles` — ordering for the torrent file browser.
 Not a flat `.sort()`: the browser injects a folder header the first time it

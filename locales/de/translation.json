@@ -544,7 +544,8 @@
       "cartEmpty": "Noch nichts in der Warteschlange",
       "cartClearAll": "Alle entfernen",
       "cartCheckout": "Weiter ({{count}})",
-      "cartAccessibility": "Warteschlange, {{count}} Torrent(s)"
+      "cartAccessibility": "Warteschlange, {{count}} Torrent(s)",
+      "forgetTerm": "„{{term}}“ vergessen"
     },
     "rss": {
       "feedsTitle": "RSS-Feeds",
@@ -716,7 +717,8 @@
     "uploadLimit": "Upload-Limit",
     "shareRatio": "Share-Verhältnis",
     "globalSpeedLimit": "Globales Geschwindigkeitslimit ({{status}})",
-    "trackers": "Trackers"
+    "trackers": "Trackers",
+    "exportTorrent": ".torrent exportieren"
   },
   "alerts": {
     "deleteTorrent": "Torrent löschen?",
@@ -1094,7 +1096,8 @@
     "serverNotFound": "Server nicht gefunden",
     "connectionFailedCheck": "Verbindung fehlgeschlagen. Bitte überprüfe deine Einstellungen und versuche, dich manuell zu verbinden.",
     "fileRenamed": "Datei umbenannt",
-    "folderRenamed": "Ordner umbenannt"
+    "folderRenamed": "Ordner umbenannt",
+    "exportTorrentFailed": "Die .torrent-Datei konnte nicht exportiert werden"
   },
   "errors": {
     "generic": "Ein Fehler ist aufgetreten",

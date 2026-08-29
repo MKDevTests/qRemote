@@ -565,7 +565,8 @@
       "cartEmpty": "Nothing queued yet",
       "cartClearAll": "Clear all",
       "cartCheckout": "Continue ({{count}})",
-      "cartAccessibility": "Add queue, {{count}} torrent(s)"
+      "cartAccessibility": "Add queue, {{count}} torrent(s)",
+      "forgetTerm": "Forget \"{{term}}\""
     },
     "rss": {
       "feedsTitle": "RSS Feeds",
@@ -737,7 +738,8 @@
     "uploadLimit": "Upload Limit",
     "shareRatio": "Share Ratio",
     "globalSpeedLimit": "Global Speed Limit ({{status}})",
-    "trackers": "Trackers"
+    "trackers": "Trackers",
+    "exportTorrent": "Export .torrent"
   },
   "alerts": {
     "deleteTorrent": "Delete torrent?",
@@ -1115,7 +1117,8 @@
     "dlLimitSetKb": "Download limit set to {{value}} KiB/s",
     "ulLimitSetKb": "Upload limit set to {{value}} KiB/s",
     "fileRenamed": "File renamed",
-    "folderRenamed": "Folder renamed"
+    "folderRenamed": "Folder renamed",
+    "exportTorrentFailed": "Could not export the .torrent file"
   },
   "errors": {
     "generic": "An error occurred",

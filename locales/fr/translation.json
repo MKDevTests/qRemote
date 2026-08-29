@@ -544,7 +544,8 @@
       "cartEmpty": "Rien en attente pour le moment",
       "cartClearAll": "Tout effacer",
       "cartCheckout": "Continuer ({{count}})",
-      "cartAccessibility": "File d'ajout, {{count}} torrent(s)"
+      "cartAccessibility": "File d'ajout, {{count}} torrent(s)",
+      "forgetTerm": "Oublier « {{term}} »"
     },
     "rss": {
       "feedsTitle": "Flux RSS",
@@ -716,7 +717,8 @@
     "uploadLimit": "Limite envoi",
     "shareRatio": "Ratio de partage",
     "globalSpeedLimit": "Limite de vitesse globale ({{status}})",
-    "trackers": "Trackers"
+    "trackers": "Trackers",
+    "exportTorrent": "Exporter le .torrent"
   },
   "alerts": {
     "deleteTorrent": "Supprimer le torrent ?",
@@ -1094,7 +1096,8 @@
     "serverNotFound": "Serveur introuvable",
     "connectionFailedCheck": "Échec de la connexion. Vérifiez vos paramètres et essayez de vous connecter manuellement.",
     "fileRenamed": "Fichier renommé",
-    "folderRenamed": "Dossier renommé"
+    "folderRenamed": "Dossier renommé",
+    "exportTorrentFailed": "Impossible d'exporter le fichier .torrent"
   },
   "errors": {
     "generic": "Une erreur s'est produite",

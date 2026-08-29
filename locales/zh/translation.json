@@ -544,7 +544,8 @@
       "cartEmpty": "队列中还没有内容",
       "cartClearAll": "清空全部",
       "cartCheckout": "继续（{{count}}）",
-      "cartAccessibility": "添加队列，共 {{count}} 个种子"
+      "cartAccessibility": "添加队列，共 {{count}} 个种子",
+      "forgetTerm": "忘记“{{term}}”"
     },
     "rss": {
       "feedsTitle": "RSS 订阅",
@@ -716,7 +717,8 @@
     "uploadLimit": "上传限速",
     "shareRatio": "分享比",
     "globalSpeedLimit": "全局限速（{{status}}）",
-    "trackers": "Trackers"
+    "trackers": "Trackers",
+    "exportTorrent": "导出 .torrent"
   },
   "alerts": {
     "deleteTorrent": "删除种子？",
@@ -1094,7 +1096,8 @@
     "serverNotFound": "未找到服务器",
     "connectionFailedCheck": "连接失败，请检查你的设置并尝试手动连接。",
     "fileRenamed": "文件已重命名",
-    "folderRenamed": "文件夹已重命名"
+    "folderRenamed": "文件夹已重命名",
+    "exportTorrentFailed": "无法导出 .torrent 文件"
   },
   "errors": {
     "generic": "发生错误",

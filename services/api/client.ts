@@ -410,6 +410,34 @@ class ApiClient {
     });
   }
 
+  /**
+   * GET an endpoint that answers with a file rather than JSON.
+   *
+   * Goes through the same axios instance as everything else on purpose: the
+   * request interceptor is what applies the resolved base URL, the session
+   * cookie, API-key or Basic auth, the Referer and Origin qBittorrent 5.x
+   * checks, and any per-server custom headers. Rebuilding that for a download
+   * would mean maintaining the auth rules in two places.
+   */
+  async getBinary(
+    url: string,
+    params?: Record<string, string | number | boolean>,
+    signal?: AbortSignal,
+  ): Promise<Uint8Array> {
+    if (!this.currentServer) {
+      throw new Error('No server configured');
+    }
+
+    return this.withRetry(async () => {
+      const response = await this.client.get(url, {
+        params,
+        signal,
+        responseType: 'arraybuffer',
+      });
+      return new Uint8Array(response.data as ArrayBuffer);
+    });
+  }
+
   async post(url: string, data?: unknown, signal?: AbortSignal): Promise<unknown> {
     if (!this.currentServer) {
       throw new Error('No server configured');
