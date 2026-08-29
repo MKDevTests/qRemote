@@ -91,7 +91,7 @@ echo "==> Building release APK"
 
 cd "$REPO_ROOT"
 
-# One APK per ABI since v4.3.0 — see plugins/withAndroidBuildTweaks.js. There is
+# One APK per ABI since v4.2.1 — see plugins/withAndroidBuildTweaks.js. There is
 # deliberately no universal build any more, so collect whatever the split
 # produced rather than reaching for a fixed filename.
 APK_DIR="android/app/build/outputs/apk/release"

@@ -88,7 +88,7 @@ four Android ABIs — **107 MB**. The plugin narrows `reactNativeArchitectures` 
 **64 MB**. Both ARM ABIs are kept so older 32-bit devices still install; the two
 dropped ones are x86 and x86_64, which only emulators use.
 
-Since **v4.3.0** the two remaining ABIs also ship *separately*, via
+Since **v4.2.1** the two remaining ABIs also ship *separately*, via
 `splits { abi }` with `universalApk false`. A device can only ever run one of
 them, so putting both in one file doubled the download for nothing: two APKs of
 roughly **35 MB** replace one of 59 MB. The release attaches both, and

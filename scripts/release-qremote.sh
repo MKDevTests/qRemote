@@ -138,7 +138,7 @@ BUILD_RC=$?
 set -e
 trap 'rollback "Script failed"' ERR
 
-# One APK per ABI since v4.3.0 (plugins/withAndroidBuildTweaks.js): all of them
+# One APK per ABI since v4.2.1 (plugins/withAndroidBuildTweaks.js): all of them
 # are attached to the release, and services/updater.ts picks the right one on
 # the device from Device.supportedCpuArchitectures.
 BUILT_APKS=()
