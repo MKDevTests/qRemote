@@ -3,7 +3,9 @@ import {
   getStateLabel,
   hasEta,
   isCompletedState,
+  isDownloadingState,
   isTorrentCompleted,
+  isUploadingState,
 } from '@/utils/torrent-state';
 
 const mockColors = {
@@ -321,5 +323,85 @@ describe('isTorrentCompleted', () => {
   it('returns false for a download-side state below 100% progress', () => {
     expect(isTorrentCompleted('stoppedDL', 0.5)).toBe(false);
     expect(isTorrentCompleted('downloading', 0.99)).toBe(false);
+  });
+});
+
+describe('isDownloadingState', () => {
+  // The bug this exists to prevent: the DL filter matched only 'downloading',
+  // so a queue of eight torrents showed the one that happened to have peers.
+  it.each([
+    'downloading',
+    'forcedDL',
+    'stalledDL',
+    'queuedDL',
+    'metaDL',
+    'forcedMetaDL',
+    'checkingDL',
+    'allocating',
+  ])('matches the download-side state %s', (state) => {
+    expect(isDownloadingState(state)).toBe(true);
+  });
+
+  it.each(['pausedDL', 'stoppedDL'])('excludes %s — the Paused chip owns it', (state) => {
+    expect(isDownloadingState(state)).toBe(false);
+  });
+
+  it.each(['uploading', 'stalledUP', 'queuedUP', 'error', 'missingFiles', 'moving', 'unknown'])(
+    'does not match %s',
+    (state) => {
+      expect(isDownloadingState(state)).toBe(false);
+    },
+  );
+});
+
+describe('isUploadingState', () => {
+  it.each(['uploading', 'forcedUP', 'stalledUP', 'queuedUP', 'checkingUP'])(
+    'matches the seed-side state %s',
+    (state) => {
+      expect(isUploadingState(state)).toBe(true);
+    },
+  );
+
+  it.each(['pausedUP', 'stoppedUP'])('excludes %s — the Paused chip owns it', (state) => {
+    expect(isUploadingState(state)).toBe(false);
+  });
+
+  it.each(['downloading', 'stalledDL', 'metaDL', 'error', 'moving', 'unknown'])(
+    'does not match %s',
+    (state) => {
+      expect(isUploadingState(state)).toBe(false);
+    },
+  );
+});
+
+describe('isDownloadingState / isUploadingState', () => {
+  it('never both claim the same state', () => {
+    const states = [
+      'error',
+      'missingFiles',
+      'uploading',
+      'pausedUP',
+      'queuedUP',
+      'stalledUP',
+      'checkingUP',
+      'forcedUP',
+      'stoppedUP',
+      'allocating',
+      'downloading',
+      'metaDL',
+      'forcedMetaDL',
+      'pausedDL',
+      'queuedDL',
+      'stalledDL',
+      'checkingDL',
+      'forcedDL',
+      'stoppedDL',
+      'checkingResumeData',
+      'moving',
+      'unknown',
+    ];
+    for (const state of states) {
+      expect(isDownloadingState(state) && isUploadingState(state)).toBe(false);
+    }
   });
 });

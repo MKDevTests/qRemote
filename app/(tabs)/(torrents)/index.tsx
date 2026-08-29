@@ -61,7 +61,7 @@ import { getErrorMessage } from '@/utils/error';
 import { extractMagnetLink } from '@/utils/magnet';
 import { getAddTorrentDialogueVariant } from '@/utils/add-torrent-dialogue';
 import { withTorrentAddDefaults } from '@/utils/torrent-add-defaults';
-import { isTorrentCompleted } from '@/utils/torrent-state';
+import { isDownloadingState, isTorrentCompleted, isUploadingState } from '@/utils/torrent-state';
 import { OptionPicker, OptionPickerItem } from '@/components/OptionPicker';
 import { MultiSelectPicker, MultiSelectPickerItem } from '@/components/MultiSelectPicker';
 import { torrentHasAnyTag, UNTAGGED_FILTER } from '@/utils/tags';
@@ -437,9 +437,9 @@ export default function TorrentsScreen() {
       filtered = filtered.filter((torrent) => {
         switch (filter) {
           case 'downloading':
-            return torrent.state === 'downloading';
+            return isDownloadingState(torrent.state);
           case 'uploading':
-            return torrent.state === 'uploading';
+            return isUploadingState(torrent.state);
           case 'completed':
             return isTorrentCompleted(torrent.state, torrent.progress);
           case 'paused':

@@ -134,6 +134,60 @@ export function isTorrentCompleted(state: string, progress: number): boolean {
 }
 
 /**
+ * True for every state on the download side of qBittorrent's state machine,
+ * except the stopped/paused ones.
+ *
+ * qBittorrent has EIGHT download-side states, not one. A torrent with no
+ * connectable peers reports `stalledDL`, one still fetching the .torrent from
+ * a magnet reports `metaDL`, one waiting its turn reports `queuedDL`, and
+ * `downloading` is reserved for the narrow case of bytes actually moving right
+ * now. Matching only `downloading` therefore hides most of a real download
+ * queue — usually all but one torrent.
+ *
+ * `stoppedDL` / `pausedDL` are deliberately excluded even though qBittorrent's
+ * own WebUI counts them as "downloading": this app shows a separate Paused
+ * chip, so a user picking DL is asking what is on its way in, not what they
+ * stopped. (Overlap between chips is fine and already the norm — Active,
+ * Stuck and DL all intersect — but Paused and DL reading as the same torrent
+ * would not be.)
+ */
+export function isDownloadingState(state: string): boolean {
+  switch (state) {
+    case 'downloading':
+    case 'forcedDL':
+    case 'stalledDL':
+    case 'queuedDL':
+    case 'metaDL':
+    case 'forcedMetaDL':
+    case 'checkingDL':
+    case 'allocating':
+      return true;
+    default:
+      return false;
+  }
+}
+
+/**
+ * The seeding-side mirror of `isDownloadingState`, and it had the same bug:
+ * matching only `uploading` hid every torrent that was seeding without an
+ * active peer (`stalledUP`), queued, forced, or rechecking.
+ *
+ * `stoppedUP` / `pausedUP` are excluded for the same reason as above.
+ */
+export function isUploadingState(state: string): boolean {
+  switch (state) {
+    case 'uploading':
+    case 'forcedUP':
+    case 'stalledUP':
+    case 'queuedUP':
+    case 'checkingUP':
+      return true;
+    default:
+      return false;
+  }
+}
+
+/**
  * ETA is only meaningful while a torrent is still downloading.
  * `8640000` is qBittorrent's sentinel for an infinite/unknown ETA.
  */
