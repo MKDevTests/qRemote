@@ -184,11 +184,20 @@ branches use a `claude/…` prefix.
 | `main` | Release branch. Android releases are cut from it with `scripts/release-qremote.sh` — see [docs/ANDROID.md](docs/ANDROID.md). |
 | `coverage` | Machine-written. The `coverage.yml` workflow force-pushes the README badge's `badge.json` here. Never branch from it or commit to it by hand. |
 
-> The upstream `"easBuild": true` App Store pipeline does **not** exist in this
-> fork: `.github/workflows/ios-deploy.yml` was removed (no Apple/EAS credentials
-> here) and the `updates` / `extra.eas` blocks were dropped from `app.config.js`
-> so a build can never pull upstream's OTA bundle. `package.json` still carries
-> the inert `easBuild` key; leave it alone rather than repurposing it.
+Two workflows live in `.github/workflows/`: `coverage.yml` (badge, on every push
+to `main`) and `android-release.yml` (manual `workflow_dispatch`, cuts a signed
+release from GitHub instead of the maintainer's machine — the same output as
+`scripts/release-qremote.sh`, reading the keystore from repository secrets).
+
+> **The upstream EAS / App Store pipeline is gone from this fork, entirely.**
+> `.github/workflows/ios-deploy.yml`, `eas.json`, `.eas/workflows/`, the
+> `easBuild` key in `package.json`, the `updates` / `extra.eas` /
+> `runtimeVersion` blocks in `app.config.js`, and the `expo-updates` dependency
+> were all removed — there are no Apple or EAS credentials here, and a build
+> that kept the OTA config would have pulled upstream's JS bundle over its own.
+> Releases go out as Android APKs on GitHub (`services/updater.ts`).
+> Don't reintroduce any of it, and treat instructions elsewhere that mention
+> `easBuild` or `eas.json` as upstream leftovers — report them.
 
 **Commit and push only when asked.** If you're asked to commit and you're sitting
 on `main`, branch first, then commit — don't ask whether the rule

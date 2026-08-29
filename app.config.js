@@ -1,12 +1,5 @@
 const packageJson = require('./package.json');
 
-// Set via eas.json's "development" build profile `env` block (NOT
-// EAS_BUILD_PROFILE — that's only injected in the remote build worker, not
-// during eas-cli's local pre-build config resolution, which is when
-// credentials/bundle id registration happens). A distinct bundle id lets the
-// dev-client build install side-by-side with the App Store build on device.
-const isDevelopmentBuild = process.env.APP_VARIANT === 'development';
-
 // Android's versionCode is a single integer and must increase on every build
 // users can update to. Deriving it from the semver in package.json keeps it a
 // pure function of the version — there is no second counter to forget to bump.
@@ -37,7 +30,11 @@ module.exports = {
     // can be rewritten by the next prebuild.
     ios: {
       supportsTablet: true,
-      bundleIdentifier: isDevelopmentBuild ? 'com.taylorcox75.expogo' : 'com.qRemote.app',
+      // Constant since the EAS pipeline was removed: the dev-client/production
+      // split came from eas.json's "development" profile setting APP_VARIANT,
+      // and that file is gone (this fork has no Apple or EAS credentials).
+      // A non-EAS build already resolved to this identifier.
+      bundleIdentifier: 'com.qRemote.app',
       appStoreUrl: 'https://apps.apple.com/us/app/qremote-for-qbittorrent/id6756276747',
       infoPlist: {
         // Must be false: RN's StatusBar API (expo-status-bar / FocusAwareStatusBar)
@@ -192,12 +189,12 @@ module.exports = {
       // fork owner means changing this and nothing else.
       githubRepo: 'MKDevTests/qRemote',
     },
-    // NOTE: no `updates` / `extra.eas` block. Upstream ships EAS OTA updates
-    // pointed at taylorcox75's Expo project — a fork that kept that URL would
-    // silently pull someone else's JS bundle over its own. Android updates go
-    // through GitHub releases instead (see services/updater.ts).
-    runtimeVersion: {
-      policy: 'appVersion',
-    },
+    // NOTE: no `updates` / `extra.eas` / `runtimeVersion` block, and
+    // expo-updates is not a dependency. Upstream ships EAS OTA updates pointed
+    // at taylorcox75's Expo project — a fork that kept that URL would silently
+    // pull someone else's JS bundle over its own. Updates go through GitHub
+    // releases instead (see services/updater.ts), so the whole OTA runtime is
+    // dead weight in the APK. `runtimeVersion` only means anything to
+    // expo-updates, so it went with it.
   },
 };

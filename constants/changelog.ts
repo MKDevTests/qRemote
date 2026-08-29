@@ -19,6 +19,41 @@ export interface ChangelogRelease {
 }
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '4.0.0',
+    date: '2026-08-29',
+    sections: [
+      {
+        title: 'New Features',
+        items: [
+          'qRemote now runs on Android, from the same code as the iOS app',
+          'Android builds update themselves: the About screen checks for a new release and installs it',
+          'New global defaults for added torrents — sequential download, and first/last piece priority — in Settings, Server Settings, Torrent Behavior',
+        ],
+      },
+      {
+        title: 'Bugs Fixed',
+        items: [
+          'The Downloading and Seeding filters only ever listed one torrent: they matched a single qBittorrent state and hid everything stalled, queued, or fetching metadata',
+          'Pause All Downloads and Pause All Uploads silently skipped stalled and queued torrents, so they did not pause everything',
+          'The First/Last Piece Priority setting was only applied by the quick-add box, and ignored by the add screen, RSS, and Search',
+          'Android: servers on plain HTTP could not be reached at all',
+          'Android: servers behind your own certificate authority were rejected even when the phone trusts the certificate',
+          'Android: the per-server Allow Self-Signed Certificate switch saved but did nothing',
+          'Connection failures reported Connection Timeout whatever the cause; they now name it',
+          'Android: .torrent files opened from another app were ignored',
+          'Android: haptic feedback never fired',
+        ],
+      },
+      {
+        title: 'Maintenance',
+        items: [
+          'The Android app no longer asks for storage or screen-overlay permissions it never used',
+          'Removed the unused over-the-air update runtime, shrinking the app',
+        ],
+      },
+    ],
+  },
+  {
     version: '3.8.40',
     date: '2026-08-23',
     sections: [

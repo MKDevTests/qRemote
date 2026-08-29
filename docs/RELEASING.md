@@ -4,15 +4,27 @@
 >
 > Everything about EAS builds, TestFlight, the App Store, the `easBuild` flag,
 > `develop`, and `.TESTFLIGHT` placeholder versions describes
-> `taylorcox75/qRemote`. This fork has no Apple or EAS credentials,
-> `.github/workflows/ios-deploy.yml` was removed, and `develop` does not exist.
+> `taylorcox75/qRemote`. None of it exists here any more: no Apple or EAS
+> credentials, and `ios-deploy.yml`, `eas.json`, `.eas/workflows/`, the
+> `easBuild` key and the `expo-updates` dependency have all been deleted.
+> `develop` does not exist either.
 > **Pushing `main` here ships nothing to anyone.**
 >
-> To actually cut a release, see **[ANDROID.md](ANDROID.md)** —
-> `scripts/release-qremote.sh` does the whole thing.
+> To actually cut a release, two paths produce the same signed APK:
+>
+> - `scripts/release-qremote.sh <version>` — locally, from `main`. See
+>   **[ANDROID.md](ANDROID.md)**.
+> - The **Android Release** workflow (`workflow_dispatch`) — from GitHub, on any
+>   machine or none, reading the keystore from repository secrets.
+>
+> **The version is not free.** `app.config.js` derives the Android `versionCode`
+> as `MAJOR*10000 + MINOR*100 + PATCH`, and Android refuses to install an APK
+> whose `versionCode` is not above the installed one. A release that lowers the
+> semver cannot be installed by anyone who already has the app — it is not a
+> cosmetic choice. Both paths check this before building.
 >
 > This file is kept for the changelog conventions in it, and as a reference for
-> anyone re-attaching an iOS pipeline later. Read it with that caveat in mind.
+> anyone re-attaching an iOS pipeline later. Read the rest with that caveat.
 
 Reference for cutting a release and for editing the changelog. **Read this file
 when you need it** — it is deliberately kept out of `AGENTS.md` so it doesn't

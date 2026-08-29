@@ -1,0 +1,185 @@
+# Cut a signed Android release without needing the maintainer's machine.
+#
+# scripts/release-qremote.sh does the same thing locally and stays the quicker
+# path day to day; this exists so a release is still possible from a different
+# computer, or from none at all. Both produce an identically signed APK,
+# because both read the same keystore — here it arrives as a repository secret
+# rather than from ~/.qremote.
+#
+# Required repository secrets (Settings, Secrets and variables, Actions):
+#   ANDROID_KEYSTORE_BASE64    base64 of qremote-release.jks
+#                              PowerShell:
+#                                [Convert]::ToBase64String([IO.File]::ReadAllBytes("$env:USERPROFILE\.qremote\qremote-release.jks")) > keystore.txt
+#   ANDROID_KEYSTORE_PASSWORD  the store password
+#   ANDROID_KEY_ALIAS          "qremote" unless you changed it
+#   ANDROID_KEY_PASSWORD       the key password
+#
+# Losing that keystore means no existing install can ever be updated again —
+# Android refuses an APK signed by a different key. Keep the offline backup.
+
+name: Android Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release, major.minor.patch (e.g. 4.0.0)'
+        required: true
+        type: string
+      dry_run:
+        description: 'Build and verify only — no commit, tag, or GitHub release'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Reject a malformed version before doing any work
+        run: |
+          if ! [[ "${{ inputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::'${{ inputs.version }}' is not major.minor.patch"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      # app.config.js derives the Android versionCode from this version as
+      # MAJOR*10000 + MINOR*100 + PATCH. Android refuses to install an APK
+      # whose versionCode is at or below the installed one, so a release that
+      # does not increase it is dead on arrival — catch it here rather than
+      # after a 40-minute build.
+      - name: Check the version actually moves forward
+        run: |
+          NEW="${{ inputs.version }}"
+          OLD="$(node -p "require('./package.json').version")"
+          code() { IFS=. read -r a b c <<< "$1"; echo $((a * 10000 + b * 100 + c)); }
+          echo "current $OLD (versionCode $(code "$OLD")) -> new $NEW (versionCode $(code "$NEW"))"
+          if [ "$OLD" = "$NEW" ]; then
+            echo "::error::package.json is already at $NEW"
+            exit 1
+          fi
+          if [ "$(code "$NEW")" -le "$(code "$OLD")" ]; then
+            echo "::error::versionCode would not increase — existing installs could not update"
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm ci
+
+      # The same gate as a local commit. A release is the one moment where
+      # running all of it is unarguably worth the time.
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Test
+        run: npm test
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Set the version
+        run: |
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.version = '${{ inputs.version }}';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+          echo "package.json -> $(node -p "require('./package.json').version")"
+
+      # Written outside the repo so it can never be committed, and removed in
+      # an always() step below whatever happens.
+      - name: Restore the signing keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 is not set — see the header of this workflow"
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/signing"
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/signing/qremote-release.jks"
+          echo "keystore restored ($(stat -c%s "$RUNNER_TEMP/signing/qremote-release.jks") bytes)"
+
+      - name: Prebuild and assemble the signed APK
+        env:
+          QREMOTE_RELEASE_KEYSTORE: ${{ runner.temp }}/signing/qremote-release.jks
+          QREMOTE_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          QREMOTE_RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          QREMOTE_RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          npx expo prebuild -p android --clean
+          cd android
+          ./gradlew assembleRelease --no-daemon
+
+      # Mirrors verify_release_apk in scripts/build-qremote-release.sh. An APK
+      # with the wrong version, or one that is debuggable, must never reach a
+      # release page.
+      - name: Verify the APK
+        run: |
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          test -f "$APK" || { echo "::error::no APK at $APK"; exit 1; }
+          AAPT2="$(find "$ANDROID_SDK_ROOT/build-tools" -name aapt2 -type f | sort -V | tail -1)"
+          BADGING="$("$AAPT2" dump badging "$APK")"
+          echo "$BADGING" | head -3
+          NAME="$(echo "$BADGING" | sed -nE "s/.*versionName='([^']*)'.*/\1/p" | head -1)"
+          if [ "$NAME" != "${{ inputs.version }}" ]; then
+            echo "::error::APK reports versionName=$NAME, expected ${{ inputs.version }}"
+            exit 1
+          fi
+          if echo "$BADGING" | grep -q "application-debuggable"; then
+            echo "::error::APK is debuggable"
+            exit 1
+          fi
+          cp "$APK" "qremote-${{ inputs.version }}.apk"
+          echo "verified: $NAME, $(du -h "qremote-${{ inputs.version }}.apk" | cut -f1)"
+
+      - name: Upload the APK as a build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: qremote-${{ inputs.version }}
+          path: qremote-${{ inputs.version }}.apk
+          if-no-files-found: error
+
+      - name: Commit, tag and publish
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json
+          git commit -m "chore(release): v${{ inputs.version }}"
+          git tag -a "v${{ inputs.version }}" -m "qRemote v${{ inputs.version }}"
+          git push origin main
+          git push origin "v${{ inputs.version }}"
+          gh release create "v${{ inputs.version }}" "qremote-${{ inputs.version }}.apk" \
+            --title "qRemote v${{ inputs.version }}" \
+            --generate-notes
+
+      - name: Shred the keystore
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/signing"
