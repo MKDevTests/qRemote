@@ -336,11 +336,37 @@ describe('apiClient', () => {
       );
     });
 
-    it('normalizes ERR_NETWORK to connection timeout error', () => {
+    // ERR_NETWORK is not a timeout — the request never completed at the
+    // transport layer. Reporting it as one sent people looking at their
+    // server's responsiveness instead of at why the platform refused the call.
+    it('reports ERR_NETWORK as unreachable, naming the URL', () => {
       const err = makeErr({ code: 'ERR_NETWORK' });
       expect(() => capturedResponseInterceptorError!(err)).toThrow(
-        'Connection timeout. Please check your server connection.',
+        /Network Error: could not reach http:\/\/example\.com\/api\/v2\/x/,
       );
+    });
+
+    // hooks/useReactiveReconnect matches this literal to decide a re-login is
+    // worth attempting; losing it would silently stop reconnects.
+    it('keeps the literal "Network Error" for the reconnect matcher', () => {
+      const err = makeErr({ code: 'ERR_NETWORK' });
+      expect(() => capturedResponseInterceptorError!(err)).toThrow('Network Error');
+    });
+
+    it('names cleartext blocking when Android reports it', () => {
+      const err = makeErr({
+        code: 'ERR_NETWORK',
+        message: 'CLEARTEXT communication to 192.168.1.10 not permitted by network security policy',
+      });
+      expect(() => capturedResponseInterceptorError!(err)).toThrow(/uses plain HTTP/);
+    });
+
+    it('names an untrusted certificate when the TLS failure reaches us', () => {
+      const err = makeErr({
+        code: 'ERR_NETWORK',
+        message: 'Trust anchor for certification path not found.',
+      });
+      expect(() => capturedResponseInterceptorError!(err)).toThrow(/TLS certificate was rejected/);
     });
 
     it('falls through to response data message for unknown status', () => {

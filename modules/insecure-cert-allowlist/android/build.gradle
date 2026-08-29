@@ -1,0 +1,27 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'io.github.mkdevtests.insecurecert'
+version = '1.0.0'
+
+android {
+  namespace 'io.github.mkdevtests.insecurecert'
+  // expo-module-gradle-plugin reads both back and fails configuration with
+  // "'android.defaultConfig.versionName' is not defined" if they are absent.
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+  }
+}
+
+dependencies {
+  // React Native's own OkHttp stack. This module replaces the client factory RN
+  // uses, so it must compile against the same classes — no version is pinned
+  // here on purpose, so it always tracks whatever the installed React Native
+  // brings (4.9.2 with RN 0.86). Pinning a different one is how you end up with
+  // two OkHttp copies and a ClassCastException at the handshake.
+  implementation 'com.facebook.react:react-android'
+  implementation "com.squareup.okhttp3:okhttp:4.9.2"
+}

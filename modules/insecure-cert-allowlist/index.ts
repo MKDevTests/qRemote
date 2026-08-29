@@ -1,13 +1,17 @@
 /**
  * index.ts — JS entry point for the InsecureCertAllowlist local native module.
  *
- * See ios/RCTHTTPRequestHandler+InsecureCert.m for why this exists: React
- * Native's default iOS HTTP handler never implements the TLS challenge
- * delegate method, so it always falls through to default system trust
- * evaluation with no override point — not even for a certificate the user
- * has manually trusted on-device. This module is the only bridge between a
- * per-server "allow self-signed certificate" opt-in in JS and that native
- * challenge handling.
+ * Bridges the per-server "allow self-signed certificate" opt-in in JS to the
+ * native TLS trust decision, which neither platform exposes any other way:
+ *
+ *  - iOS: React Native's default HTTP handler never implements the TLS
+ *    challenge delegate method, so it always falls through to system trust
+ *    evaluation with no override point — not even for a certificate the user
+ *    manually trusted on-device. See ios/RCTHTTPRequestHandler+InsecureCert.m.
+ *  - Android: OkHttp does allow a custom trust manager, so the equivalent is a
+ *    replacement client factory that tries real validation first and only falls
+ *    back to the allowlist. See
+ *    android/.../InsecureCertOkHttpClientFactory.kt.
  */
 interface InsecureCertAllowlistNativeModule {
   setAllowedHosts(hosts: string[]): void;
@@ -26,8 +30,9 @@ try {
   nativeModule = requireNativeModule('InsecureCertAllowlist');
 } catch {
   // Not available (e.g. the `node` Jest project, or jest-expo mocking native
-  // modules generically without knowing this one). Safe to no-op — the
-  // toggle this feeds is iOS-only.
+  // modules generically without knowing this one). Safe to no-op: without a
+  // native side the toggle simply does nothing, which is the same as before it
+  // was implemented.
   nativeModule = null;
 }
 

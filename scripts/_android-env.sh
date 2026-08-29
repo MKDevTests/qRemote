@@ -97,6 +97,12 @@ ensure_prebuild() {
     elif [[ -n "$(find "$repo_root/plugins" -newer "$repo_root/android/app/build.gradle" -name '*.js' 2>/dev/null)" ]]; then
         echo "==> a config plugin is newer than the generated project"
         needs_prebuild=1
+    elif [[ -n "$(find "$repo_root/modules" -newer "$repo_root/android/app/build.gradle" -name 'expo-module.config.json' 2>/dev/null)" ]]; then
+        # Only the file that changes how a local module is *linked*. Editing
+        # the Kotlin or Swift inside one is picked up by an ordinary build;
+        # adding a platform to expo-module.config.json is not.
+        echo "==> a local module's linking config is newer than the generated project"
+        needs_prebuild=1
     fi
     [[ "$force" == "1" ]] && needs_prebuild=1
 

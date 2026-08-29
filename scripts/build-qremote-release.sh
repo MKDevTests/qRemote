@@ -46,7 +46,7 @@ done
 GRADLE_PROPS="$HOME/.gradle/gradle.properties"
 PROP_KEYSTORE=""
 if [[ -f "$GRADLE_PROPS" ]]; then
-    PROP_KEYSTORE="$(sed -nE 's/^[[:space:]]*QREMOTE_RELEASE_KEYSTORE[[:space:]]*=[[:space:]]*(.*[^[:space:]])[[:space:]]*$//p' "$GRADLE_PROPS" | tail -n 1)"
+    PROP_KEYSTORE="$(sed -nE 's/^[[:space:]]*QREMOTE_RELEASE_KEYSTORE[[:space:]]*=[[:space:]]*(.*[^[:space:]])[[:space:]]*$/\1/p' "$GRADLE_PROPS" | tail -n 1)"
 fi
 
 if [[ -n "${QREMOTE_RELEASE_KEYSTORE:-}" ]]; then

@@ -2,6 +2,14 @@
 ios/
 !modules/**/ios/
 android/
+# Same exemption as ios/ above: the generated app-level android/ is ignored,
+# but a local Expo module ships its own android/ source tree and MUST be
+# committed -- without it the native side of modules/* is silently absent from
+# a fresh clone and the module autolinks to nothing.
+!modules/**/android/
+# ...but never its Gradle output.
+modules/**/android/build/
+modules/**/android/.cxx/
 # dependencies
 node_modules/
 key.json

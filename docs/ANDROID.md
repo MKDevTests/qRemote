@@ -252,13 +252,37 @@ The scripts always write forward slashes.
 
 ---
 
+## Reaching a server: what Android blocks by default
+
+Three separate platform defaults stand between the app and a self-hosted
+qBittorrent, and all three fail the same silent way — the request never
+completes and axios reports a bare network error.
+
+| Setup | What blocks it | Handled by |
+|---|---|---|
+| `http://192.168.x.x:8080` | Cleartext refused since API 28 | `cleartextTrafficPermitted` in the network security config |
+| HTTPS behind your own CA | Apps ignore user-installed CAs since Android 7 | `<certificates src="user" />` in the same config — **the CA must be installed on the device** |
+| HTTPS with a self-signed cert | No trust anchor at all | The per-server "Allow Self-Signed Certificate" toggle |
+
+The first two live in `plugins/withAndroidNetworkSecurity.js`, which writes
+`res/xml/network_security_config.xml` and points the manifest at it.
+
+> `expo.android.usesCleartextTraffic` is **not** a key in the Expo config
+> schema. Setting it in `app.config.js` is accepted silently and produces a
+> manifest without it — which shipped once here, with every HTTP server
+> unreachable and no error saying why. Check the generated manifest, not the
+> config.
+
+The toggle is backed by `modules/insecure-cert-allowlist`, which now has both
+platforms. On Android it replaces React Native's OkHttp client factory with one
+whose trust manager tries real validation first and only falls back to the
+allowlist — scoped per host via `X509ExtendedTrustManager`, which is the only
+variant handed the socket of the connection being validated. A host that is
+allow-listed but whose certificate is genuinely valid is still validated
+normally.
+
 ## Known Android gaps
 
-- **Self-signed certificates.** The per-server "Allow Self-Signed Certificate"
-  toggle is backed by `modules/insecure-cert-allowlist`, which is an iOS-only
-  native module (`platforms: ["ios"]`). On Android the JS call is a no-op, so
-  the toggle currently does nothing. Use a proper certificate, or plain HTTP on
-  the LAN, until an Android side is written for it.
 - **Haptics** are enabled on Android but map onto the vibrator rather than the
   Taptic Engine, so they feel coarser than on iOS. `Settings → Advanced` turns
   them off.

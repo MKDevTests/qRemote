@@ -106,11 +106,11 @@ module.exports = {
         foregroundImage: './assets/icon.png',
         backgroundColor: '#0A0A0A',
       },
-      // qBittorrent WebUIs are overwhelmingly plain HTTP on a LAN address.
-      // Android blocks cleartext by default since API 28, which would make
-      // every default-configured server unreachable. This is the Android
-      // counterpart of the iOS NSAllowsArbitraryLoads above.
-      usesCleartextTraffic: true,
+      // NOTE: cleartext HTTP and user-installed CAs are enabled by
+      // ./plugins/withAndroidNetworkSecurity, NOT here. `usesCleartextTraffic`
+      // is not a key in the Expo android config schema — setting it here is
+      // accepted in silence and produces a manifest without it, which is how
+      // this shipped once already with every HTTP server unreachable.
       permissions: [
         'android.permission.INTERNET',
         'android.permission.ACCESS_NETWORK_STATE',
@@ -181,8 +181,10 @@ module.exports = {
       'expo-status-bar',
       // iOS-only mod (withAppDelegate); prebuild skips it for -p android.
       './plugins/withNativeTorrentFileCopy',
-      // Android-only mod (withAppBuildGradle); prebuild skips it for -p ios.
+      // Android-only mods (withAppBuildGradle / withAndroidManifest); prebuild
+      // skips them for -p ios.
       './plugins/withAndroidBuildTweaks',
+      './plugins/withAndroidNetworkSecurity',
     ],
     extra: {
       router: {},
