@@ -15,7 +15,6 @@ import {
   TouchableOpacity,
   Animated,
   Linking,
-  Platform,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -33,8 +32,6 @@ import { spacing, borderRadius } from '@/constants/spacing';
 import { shadows } from '@/constants/shadows';
 import { typography } from '@/constants/typography';
 import { colorThemeManager } from '@/services/color-theme-manager';
-
-const APP_STORE_URL = 'https://apps.apple.com/us/app/qremote-for-qbittorrent/id6756276747';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -174,15 +171,6 @@ export default function SettingsScreen() {
       showToast(getErrorMessage(error), 'error');
     }
   };
-
-  const handleRate = useCallback(() => {
-    // This is an explicit "rate us" button, not a soft in-context ask, so it
-    // must go straight to the App Store review page. StoreReview.requestReview()
-    // is throttled by iOS to ~3 prompts/year and resolves silently with no
-    // dialog once that's exhausted -- it would make this button appear to do
-    // nothing on repeat taps (#212).
-    Linking.openURL(`${APP_STORE_URL}?action=write-review`).catch(() => {});
-  }, []);
 
   return (
     <>
@@ -375,34 +363,17 @@ export default function SettingsScreen() {
               onPress={() => Linking.openURL('https://github.com/MKDevTests/qRemote')}
               colors={colors}
             />
+            {/* Upstream's Beer Fund and App Store review rows were removed with
+                the rest of the upstream links: this fork is not on the App
+                Store, and a donate button inside this app was sending money to
+                a different maintainer. Add your own here if you want them. */}
             <ExternalRow
               icon="bug-outline"
               label={t('screens.settings.reportIssue')}
               onPress={() => Linking.openURL('https://github.com/MKDevTests/qRemote/issues')}
               colors={colors}
+              isLast
             />
-            <ExternalRow
-              icon="beer-outline"
-              label={t('screens.settings.buyMeBeer')}
-              onPress={() =>
-                Linking.openURL(
-                  'https://www.paypal.com/donate/?business=E9XLGFHN963HN&no_recurring=0&currency_code=USD',
-                )
-              }
-              colors={colors}
-            />
-            {/* App Store review page — this build is not on the App Store on
-                Android, so the row would open a page about a different app. */}
-            {Platform.OS === 'ios' && (
-              <ExternalRow
-                description={t('screens.settings.rateAppHint')}
-                onPress={handleRate}
-                colors={colors}
-                trailing="stars"
-                icon="thumbs-up-outline"
-                isLast
-              />
-            )}
           </View>
         </View>
 

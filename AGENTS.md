@@ -341,7 +341,9 @@ Complete map. Trust it.
 
 **Settings sub-screens** — hub order on `index` is Servers → Appearance → Server
 Settings → RSS → Search Plugins → Advanced, then What's New → About, then
-Community links (source / issues / Beer Fund / Rate). Notifications & Feedback is
+Community links (source / issues only — upstream's Beer Fund and App Store
+review rows were removed with the rest of the upstream links: this fork is not
+on the App Store, and the donate button paid a different maintainer). Notifications & Feedback is
 nested under `advanced`, not on the hub.
 
 `about` · `add-torrent-dialogue` · `advanced` · `appearance` ·

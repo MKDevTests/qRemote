@@ -19,6 +19,24 @@ export interface ChangelogRelease {
 }
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '4.1.0',
+    date: '2026-08-29',
+    sections: [
+      {
+        title: 'New Features',
+        items: [
+          'Magnet basket: turn on collect mode from the magnet button above the torrent list, then tap magnet links anywhere — they queue up without opening the app, and you add them all at once later',
+          'The basket survives closing the app, so links can be gathered over days',
+          'Duplicate magnets are recognised even when two sites hand out the same torrent with different trackers',
+        ],
+      },
+      {
+        title: 'Maintenance',
+        items: ['Removed the last links pointing at the original project this fork came from'],
+      },
+    ],
+  },
+  {
     version: '4.0.0',
     date: '2026-08-29',
     sections: [
