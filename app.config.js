@@ -135,6 +135,35 @@ module.exports = {
         'android.permission.SYSTEM_ALERT_WINDOW',
         'android.permission.READ_EXTERNAL_STORAGE',
         'android.permission.WRITE_EXTERNAL_STORAGE',
+        // expo-notifications drags in Firebase Cloud Messaging and every
+        // launcher badge integration it knows about — 22 permissions, of which
+        // this app exercises four (POST_NOTIFICATIONS, plus WAKE_LOCK,
+        // RECEIVE_BOOT_COMPLETED and FOREGROUND_SERVICE for the WorkManager
+        // job). Verified by diffing the shipped APKs with `aapt2 dump
+        // permissions`, which is the only place this shows up: the library's
+        // own AndroidManifest declares just two, the rest arrive transitively.
+        //
+        // Push is never used — every notification is posted locally with
+        // scheduleNotificationAsync — and setBadgeCountAsync is never called,
+        // so none of the below is reachable.
+        'com.google.android.c2dm.permission.RECEIVE',
+        'com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE',
+        'android.permission.READ_APP_BADGE',
+        'com.anddoes.launcher.permission.UPDATE_COUNT',
+        'com.htc.launcher.permission.READ_SETTINGS',
+        'com.htc.launcher.permission.UPDATE_SHORTCUT',
+        'com.huawei.android.launcher.permission.CHANGE_BADGE',
+        'com.huawei.android.launcher.permission.READ_SETTINGS',
+        'com.huawei.android.launcher.permission.WRITE_SETTINGS',
+        'com.majeur.launcher.permission.UPDATE_BADGE',
+        'com.oppo.launcher.permission.READ_SETTINGS',
+        'com.oppo.launcher.permission.WRITE_SETTINGS',
+        'com.sec.android.provider.badge.permission.READ',
+        'com.sec.android.provider.badge.permission.WRITE',
+        'com.sonyericsson.home.permission.BROADCAST_BADGE',
+        'com.sonymobile.home.permission.PROVIDER_INSERT_BADGE',
+        'me.everything.badger.permission.BADGE_COUNT_READ',
+        'me.everything.badger.permission.BADGE_COUNT_WRITE',
       ],
       intentFilters: [
         // magnet: links from a browser or any other app.
