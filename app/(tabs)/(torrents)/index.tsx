@@ -41,6 +41,7 @@ import { ConfirmModal } from '@/components/ConfirmModal';
 import { FocusAwareStatusBar } from '@/components/FocusAwareStatusBar';
 import { EmptyState } from '@/components/EmptyState';
 import { FilterChip } from '@/components/FilterChip';
+import { completionTime } from '@/utils/torrent-sort';
 import { torrentsApi } from '@/services/api/torrents';
 import { applicationApi } from '@/services/api/application';
 import { apiClient } from '@/services/api/client';
@@ -111,7 +112,15 @@ export default function TorrentsScreen() {
   const [bulkTagMode, setBulkTagMode] = useState<'add' | 'remove' | null>(null);
   const [bulkTagDraft, setBulkTagDraft] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<
-    'name' | 'size' | 'progress' | 'dlspeed' | 'upspeed' | 'ratio' | 'priority' | 'added_on'
+    | 'name'
+    | 'size'
+    | 'progress'
+    | 'dlspeed'
+    | 'upspeed'
+    | 'ratio'
+    | 'priority'
+    | 'added_on'
+    | 'completion_on'
   >('added_on');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [showSortMenu, setShowSortMenu] = useState(false);
@@ -521,6 +530,11 @@ export default function TorrentsScreen() {
           break;
         case 'added_on':
           comparison = a.added_on - b.added_on;
+          break;
+        case 'completion_on':
+          // Normalised, not raw: an unfinished torrent carries a sentinel that
+          // would otherwise sort as a date. See utils/torrent-sort.ts.
+          comparison = completionTime(a) - completionTime(b);
           break;
         default:
           return 0;
@@ -1107,6 +1121,11 @@ export default function TorrentsScreen() {
 
   const sortOptions = [
     { key: 'added_on' as const, labelKey: 'sort.dateAdded', icon: 'time-outline' as const },
+    {
+      key: 'completion_on' as const,
+      labelKey: 'sort.dateCompleted',
+      icon: 'checkmark-done-outline' as const,
+    },
     { key: 'name' as const, labelKey: 'sort.name', icon: 'text-outline' as const },
     { key: 'size' as const, labelKey: 'sort.size', icon: 'albums-outline' as const },
     { key: 'progress' as const, labelKey: 'sort.progress', icon: 'stats-chart-outline' as const },
@@ -1367,11 +1386,19 @@ export default function TorrentsScreen() {
                           if (item.key === 'downloading') setSortBy('dlspeed');
                           else if (item.key === 'uploading') setSortBy('upspeed');
                           else if (item.key === 'queued') setSortBy('priority');
+                          else if (item.key === 'completed') setSortBy('completion_on');
                         } else {
                           setFilter(item.key);
                           if (item.key === 'downloading') setSortBy('dlspeed');
                           else if (item.key === 'uploading') setSortBy('upspeed');
                           else if (item.key === 'queued') setSortBy('priority');
+                          else if (item.key === 'completed') {
+                            setSortBy('completion_on');
+                            // Newest first, every time. The other chips inherit
+                            // whatever direction was left over; this one cannot,
+                            // because "most recently finished" is the point.
+                            setSortDirection('desc');
+                          }
                         }
                       }}
                     />

@@ -1033,6 +1033,7 @@
   },
   "sort": {
     "dateAdded": "添加日期",
+    "dateCompleted": "完成日期",
     "name": "名称",
     "size": "大小",
     "progress": "进度",

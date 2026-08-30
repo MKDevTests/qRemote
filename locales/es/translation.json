@@ -1033,6 +1033,7 @@
   },
   "sort": {
     "dateAdded": "Fecha",
+    "dateCompleted": "Fecha de finalización",
     "name": "Nombre",
     "size": "Tamaño",
     "progress": "Progreso",

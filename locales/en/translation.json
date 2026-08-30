@@ -1054,6 +1054,7 @@
   },
   "sort": {
     "dateAdded": "Date Added",
+    "dateCompleted": "Date completed",
     "name": "Name",
     "size": "Size",
     "progress": "Progress",

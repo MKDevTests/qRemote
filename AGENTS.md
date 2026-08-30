@@ -651,6 +651,13 @@ of them) ·
 `preference-migrations.ts` (`migratePreferences` — the schema-versioned
 migration chain for the preferences blob; append-only, a throwing step is
 skipped rather than taking the store down) ·
+`torrent-sort.ts` (`completionTime` — `completion_on` normalised for sorting.
+Most sort keys compare fine raw; this one carries a sentinel for torrents that
+never finished, and qBittorrent builds do not agree on which. Non-positive is
+the documented one — `formatDate` already treats `<= 0` as no date — but an
+*unsigned* 4294967295 reads as the year 2106 and would head a newest-first
+sort, so anything past roughly now is folded to 0 too. It is when **this
+client** saw the torrent finish, not a release date) ·
 `search-dedupe.ts` (`dedupeSearchResults` / `dedupedPrimaries` — collapse the
 same release reported by several indexers. qBittorrent concatenates plugin
 output without deduplicating, so this is the client's job. Keys on the
