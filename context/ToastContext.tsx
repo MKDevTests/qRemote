@@ -8,18 +8,24 @@ import React, {
   ReactNode,
 } from 'react';
 import { Platform } from 'react-native';
-import { Toast, ToastType } from '@/components/Toast';
+import { Toast, ToastAction, ToastType } from '@/components/Toast';
 import { storageService } from '@/services/storage';
 
 interface ToastState {
   message: string;
   type: ToastType;
   duration: number;
+  action?: ToastAction;
   id: number;
 }
 
 interface ToastContextType {
-  showToast: (message: string, type?: ToastType, duration?: number) => void;
+  /**
+   * `action` puts a button in the toast — see `ToastAction`. Pair it with an
+   * explicit `duration`: the default is tuned for reading, not for deciding,
+   * and an undo the user cannot reach in time is worse than none.
+   */
+  showToast: (message: string, type?: ToastType, duration?: number, action?: ToastAction) => void;
   toast: ToastState | null;
   hideToast: () => void;
   /** Internal — ModalToast mounts register here so the global toast yields. */
@@ -75,8 +81,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   // causes this provider to re-render, which would hand out a new function
   // reference, which the consuming effect sees as a "changed" dependency.
   const showToast = useCallback(
-    (message: string, type: ToastType = 'info', duration?: number) => {
-      setToast({ message, type, duration: duration ?? defaultDuration, id: Date.now() });
+    (message: string, type: ToastType = 'info', duration?: number, action?: ToastAction) => {
+      setToast({
+        message,
+        type,
+        duration: duration ?? defaultDuration,
+        action,
+        id: Date.now(),
+      });
     },
     [defaultDuration],
   );
@@ -113,6 +125,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           message={toast.message}
           type={toast.type}
           duration={toast.duration}
+          action={toast.action}
           onHide={hideToast}
           topOffsetOverride={topOffsetOverride ?? undefined}
         />
@@ -160,6 +173,7 @@ export function ModalToast() {
       message={toast.message}
       type={toast.type}
       duration={toast.duration}
+      action={toast.action}
       onHide={hideToast}
     />
   );

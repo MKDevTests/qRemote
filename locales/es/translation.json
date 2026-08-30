@@ -26,7 +26,10 @@
     "off": "OFF",
     "back": "Atrás",
     "clearSearch": "Borrar búsqueda",
-    "moreInfo": "Más información"
+    "moreInfo": "Más información",
+    "undo": "Deshacer",
+    "showPassword": "Mostrar contraseña",
+    "hidePassword": "Ocultar contraseña"
   },
   "screens": {
     "torrents": {
@@ -724,7 +727,8 @@
     "shareRatio": "Ratio de compartición",
     "globalSpeedLimit": "Límite de velocidad global ({{status}})",
     "trackers": "Trackers",
-    "exportTorrent": "Exportar .torrent"
+    "exportTorrent": "Exportar .torrent",
+    "deselect": "Deseleccionar"
   },
   "alerts": {
     "deleteTorrent": "¿Eliminar torrent?",
@@ -743,7 +747,9 @@
     "deleteFolder": "¿Eliminar carpeta?",
     "deleteFolderMessage": "Esto elimina la carpeta y todos los feeds que contiene de qBittorrent.",
     "deleteRule": "¿Eliminar regla?",
-    "deleteRuleMessage": "Esto elimina la regla de descarga automática de qBittorrent. Dejará de coincidir con nuevos artículos de inmediato."
+    "deleteRuleMessage": "Esto elimina la regla de descarga automática de qBittorrent. Dejará de coincidir con nuevos artículos de inmediato.",
+    "deselectFolderTitle": "¿Deseleccionar esta carpeta?",
+    "deselectFolderMessage": "Se dejarán de descargar sus {{count}} archivos."
   },
   "server": {
     "serverInfo": "INFO DEL SERVIDOR",
@@ -1022,7 +1028,8 @@
     "uncategorized": "Sin categoría",
     "tags": "Etiquetas",
     "tagsCount": "Etiquetas ({{count}})",
-    "untagged": "Sin etiquetas"
+    "untagged": "Sin etiquetas",
+    "queued": "En cola"
   },
   "sort": {
     "dateAdded": "Fecha",
@@ -1089,7 +1096,6 @@
     "serverSettingUpdated": "Ajuste del servidor actualizado",
     "savePathSavedLocally": "Guardado localmente. Conéctate a un servidor para actualizar en qBittorrent.",
     "allFilesSelected": "Todos los archivos seleccionados para descargar",
-    "allFilesDeselected": "Todas las selecciones anuladas",
     "prioritySet": "Prioridad establecida en {{label}}",
     "prioritySetForCount": "Prioridad establecida en {{label}} para {{count}} archivo(s)",
     "fileSelected": "Archivo seleccionado: {{name}}",
@@ -1106,7 +1112,8 @@
     "exportTorrentFailed": "No se pudo exportar el archivo .torrent",
     "downloadComplete": "Descarga completada",
     "downloadsComplete": "{{total}} descargas completadas",
-    "downloadsCompleteBody": "{{name}} y {{others}} más"
+    "downloadsCompleteBody": "{{name}} y {{others}} más",
+    "filesDeselected": "{{count}} archivo(s) deseleccionado(s)"
   },
   "errors": {
     "generic": "Ocurrió un error",

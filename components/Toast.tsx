@@ -9,10 +9,25 @@ import { spacing, borderRadius } from '@/constants/spacing';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
+/**
+ * An optional button in the toast — the "Undo" of an action that already
+ * happened.
+ *
+ * This exists because confirming every destructive tap is the wrong trade:
+ * it taxes the deliberate case to protect against the accidental one. A toast
+ * that can be acted on lets the action go through immediately and still be
+ * taken back, which is what the file browser's checkboxes needed.
+ */
+export interface ToastAction {
+  label: string;
+  onPress: () => void;
+}
+
 interface ToastProps {
   message: string;
   type?: ToastType;
   duration?: number;
+  action?: ToastAction;
   onHide?: () => void;
   /** Overrides the default safe-area-relative position — for screens whose
    *  own header content (search bar, buttons) would otherwise sit under it. */
@@ -23,6 +38,7 @@ export function Toast({
   message,
   type = 'info',
   duration = 3000,
+  action,
   onHide,
   topOffsetOverride,
 }: ToastProps) {
@@ -125,6 +141,21 @@ export function Toast({
         <Text style={[styles.message, { color: colors.text }]} numberOfLines={2}>
           {message}
         </Text>
+        {action && (
+          <TouchableOpacity
+            onPress={() => {
+              action.onPress();
+              hide();
+            }}
+            hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel={action.label}
+          >
+            <Text style={[styles.action, { color: colors.primary }]} numberOfLines={1}>
+              {action.label}
+            </Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           onPress={hide}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -158,5 +189,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
     lineHeight: 20,
+  },
+  action: {
+    fontSize: 15,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });
