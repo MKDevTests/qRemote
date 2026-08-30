@@ -98,8 +98,13 @@ module.exports = {
     android: {
       package: 'io.github.mkdevtests.qremote',
       versionCode: ANDROID_VERSION_CODE,
+      // NOT ./assets/icon.png: that one is opaque, and an opaque foreground
+      // makes `backgroundColor` dead code while handing the launcher a baked-in
+      // square to mask. The adaptive asset is transparent and keeps the mark
+      // inside the middle 60% of the canvas — Android only guarantees the
+      // middle 61% survives every launcher's mask shape.
       adaptiveIcon: {
-        foregroundImage: './assets/icon.png',
+        foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#0A0A0A',
       },
       // NOTE: cleartext HTTP and user-installed CAs are enabled by
@@ -192,7 +197,18 @@ module.exports = {
       // runtime prompt come from expo-notifications, the 15-minute WorkManager
       // check from expo-background-task (which needs expo-task-manager to
       // define the task).
-      'expo-notifications',
+      //
+      // `icon` is not optional here. Android draws the status-bar icon from the
+      // alpha channel alone and repaints it in `color`; with no icon set it
+      // falls back to the app icon, which is opaque, so every notification
+      // showed up as a solid white square.
+      [
+        'expo-notifications',
+        {
+          icon: './assets/notification-icon.png',
+          color: '#1B5EFC',
+        },
+      ],
       'expo-task-manager',
       'expo-background-task',
     ],

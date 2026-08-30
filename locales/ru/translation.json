@@ -26,7 +26,10 @@
     "off": "ВЫКЛ",
     "back": "Назад",
     "clearSearch": "Очистить поиск",
-    "moreInfo": "Подробнее"
+    "moreInfo": "Подробнее",
+    "undo": "Отменить",
+    "showPassword": "Показать пароль",
+    "hidePassword": "Скрыть пароль"
   },
   "states": {
     "dlAndUl": "Загрузка + отдача",
@@ -745,7 +748,8 @@
     "shareRatio": "Коэффициент раздачи",
     "globalSpeedLimit": "Общий лимит скорости ({{status}})",
     "trackers": "Трекеры",
-    "exportTorrent": "Экспорт .torrent"
+    "exportTorrent": "Экспорт .torrent",
+    "deselect": "Снять выбор"
   },
   "alerts": {
     "deleteTorrent": "Удалить торрент?",
@@ -764,7 +768,9 @@
     "deleteFolder": "Удалить папку?",
     "deleteFolderMessage": "Папка и все ленты внутри неё будут удалены из qBittorrent.",
     "deleteRule": "Удалить правило?",
-    "deleteRuleMessage": "Правило автозагрузки будет удалено из qBittorrent. Оно сразу перестанет применяться к новым статьям."
+    "deleteRuleMessage": "Правило автозагрузки будет удалено из qBittorrent. Оно сразу перестанет применяться к новым статьям.",
+    "deselectFolderTitle": "Снять выбор с этой папки?",
+    "deselectFolderMessage": "Загрузка всех файлов в ней ({{count}}) будет остановлена."
   },
   "server": {
     "serverInfo": "СЕРВЕР",
@@ -1043,7 +1049,8 @@
     "uncategorized": "Без категории",
     "tags": "Теги",
     "tagsCount": "Теги ({{count}})",
-    "untagged": "Без тегов"
+    "untagged": "Без тегов",
+    "queued": "В очереди"
   },
   "sort": {
     "dateAdded": "Дата добавления",
@@ -1118,7 +1125,6 @@
     "serverSettingUpdated": "Настройка сервера обновлена",
     "savePathSavedLocally": "Сохранено локально. Подключитесь к серверу, чтобы обновить qBittorrent.",
     "allFilesSelected": "Все файлы выбраны для загрузки",
-    "allFilesDeselected": "Выбор со всех файлов снят",
     "prioritySet": "Приоритет: {{label}}",
     "prioritySetForCount": "Приоритет {{label}} для {{count}} файл(ов)",
     "fileSelected": "Выбран файл: {{name}}",
@@ -1127,7 +1133,8 @@
     "exportTorrentFailed": "Не удалось экспортировать файл .torrent",
     "downloadComplete": "Загрузка завершена",
     "downloadsComplete": "Загрузок завершено: {{total}}",
-    "downloadsCompleteBody": "{{name}} и ещё {{others}}"
+    "downloadsCompleteBody": "{{name}} и ещё {{others}}",
+    "filesDeselected": "Снят выбор с файлов: {{count}}"
   },
   "errors": {
     "generic": "Произошла ошибка",

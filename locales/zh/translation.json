@@ -26,7 +26,10 @@
     "off": "关",
     "back": "返回",
     "clearSearch": "清除搜索",
-    "moreInfo": "更多信息"
+    "moreInfo": "更多信息",
+    "undo": "撤销",
+    "showPassword": "显示密码",
+    "hidePassword": "隐藏密码"
   },
   "screens": {
     "torrents": {
@@ -724,7 +727,8 @@
     "shareRatio": "分享比",
     "globalSpeedLimit": "全局限速（{{status}}）",
     "trackers": "Trackers",
-    "exportTorrent": "导出 .torrent"
+    "exportTorrent": "导出 .torrent",
+    "deselect": "取消选择"
   },
   "alerts": {
     "deleteTorrent": "删除种子？",
@@ -743,7 +747,9 @@
     "deleteFolder": "删除文件夹？",
     "deleteFolderMessage": "这将从 qBittorrent 中移除该文件夹及其中的所有订阅。",
     "deleteRule": "删除规则？",
-    "deleteRuleMessage": "这将从 qBittorrent 中移除此自动下载规则，它会立即停止匹配新文章。"
+    "deleteRuleMessage": "这将从 qBittorrent 中移除此自动下载规则，它会立即停止匹配新文章。",
+    "deselectFolderTitle": "取消选择此文件夹？",
+    "deselectFolderMessage": "其中的 {{count}} 个文件将停止下载。"
   },
   "server": {
     "serverInfo": "服务器信息",
@@ -1022,7 +1028,8 @@
     "uncategorized": "未分类",
     "tags": "标签",
     "tagsCount": "标签 ({{count}})",
-    "untagged": "无标签"
+    "untagged": "无标签",
+    "queued": "排队中"
   },
   "sort": {
     "dateAdded": "添加日期",
@@ -1091,7 +1098,6 @@
     "serverSettingUpdated": "服务器设置已更新",
     "savePathSavedLocally": "已本地保存。连接到服务器以在 qBittorrent 上更新。",
     "allFilesSelected": "已选择全部文件以下载",
-    "allFilesDeselected": "已取消全选",
     "prioritySet": "优先级已设为 {{label}}",
     "prioritySetForCount": "已为 {{count}} 个文件设置优先级为 {{label}}",
     "fileSelected": "已选择文件：{{name}}",
@@ -1106,7 +1112,8 @@
     "exportTorrentFailed": "无法导出 .torrent 文件",
     "downloadComplete": "下载完成",
     "downloadsComplete": "{{total}} 项下载完成",
-    "downloadsCompleteBody": "{{name}} 等 {{others}} 项"
+    "downloadsCompleteBody": "{{name}} 等 {{others}} 项",
+    "filesDeselected": "已取消选择 {{count}} 个文件"
   },
   "errors": {
     "generic": "发生错误",

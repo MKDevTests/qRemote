@@ -440,6 +440,10 @@ export default function TorrentsScreen() {
         switch (filter) {
           case 'downloading':
             return isDownloadingState(torrent.state);
+          case 'queued':
+            // Download side only. A torrent queued to *seed* answers a
+            // different question and belongs with uploading, not here.
+            return torrent.state === 'queuedDL';
           case 'uploading':
             return isUploadingState(torrent.state);
           case 'completed':
@@ -1094,6 +1098,10 @@ export default function TorrentsScreen() {
     { key: 'paused', labelKey: 'filters.paused', icon: 'pause-circle' as const },
     { key: 'stuck', labelKey: 'filters.stuck', icon: 'warning' as const },
     { key: 'downloading', labelKey: 'filters.downloading', icon: 'arrow-down' as const },
+    // Queued downloads need their own chip because `isDownloadingState` counts
+    // them as downloading: without this there is no way to see what is waiting
+    // its turn as opposed to actually moving.
+    { key: 'queued', labelKey: 'filters.queued', icon: 'hourglass-outline' as const },
     { key: 'uploading', labelKey: 'filters.uploading', icon: 'arrow-up' as const },
   ];
 
@@ -1358,10 +1366,12 @@ export default function TorrentsScreen() {
                           setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
                           if (item.key === 'downloading') setSortBy('dlspeed');
                           else if (item.key === 'uploading') setSortBy('upspeed');
+                          else if (item.key === 'queued') setSortBy('priority');
                         } else {
                           setFilter(item.key);
                           if (item.key === 'downloading') setSortBy('dlspeed');
                           else if (item.key === 'uploading') setSortBy('upspeed');
+                          else if (item.key === 'queued') setSortBy('priority');
                         }
                       }}
                     />

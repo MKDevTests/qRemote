@@ -28,6 +28,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { useServer } from '@/context/ServerContext';
 import { useToast, ModalToast } from '@/context/ToastContext';
 import { FocusAwareStatusBar } from '@/components/FocusAwareStatusBar';
+import { SecureTextInput } from '@/components/SecureTextInput';
 import { SuperDebugPanel } from '@/components/SuperDebugPanel';
 import { DebugRow } from '@/components/DebugRow';
 import { SettingRow } from '@/components/SettingRow';
@@ -720,13 +721,12 @@ App Version: ${APP_VERSION}`;
                       color={colors.primary}
                       style={styles.inputIcon}
                     />
-                    <TextInput
+                    <SecureTextInput
                       style={[styles.input, { color: colors.text }]}
                       value={password}
                       onChangeText={setPassword}
                       placeholder={t('placeholders.password')}
                       placeholderTextColor={colors.textSecondary}
-                      secureTextEntry
                       autoCapitalize="none"
                       autoCorrect={false}
                       // "none", not "password": "password" is the explicit iOS AutoFill
@@ -755,13 +755,12 @@ App Version: ${APP_VERSION}`;
                       color={colors.primary}
                       style={styles.inputIcon}
                     />
-                    <TextInput
+                    <SecureTextInput
                       style={[styles.input, { color: colors.text }]}
                       value={apiKey}
                       onChangeText={setApiKey}
                       placeholder={t('placeholders.apiKey')}
                       placeholderTextColor={colors.textSecondary}
-                      secureTextEntry
                       autoCapitalize="none"
                       autoCorrect={false}
                       textContentType="none"
@@ -881,13 +880,12 @@ App Version: ${APP_VERSION}`;
                           color={colors.primary}
                           style={styles.inputIcon}
                         />
-                        <TextInput
+                        <SecureTextInput
                           style={[styles.input, { color: colors.text }]}
                           value={basicAuthPassword}
                           onChangeText={setBasicAuthPassword}
                           placeholder={t('placeholders.proxyPassword')}
                           placeholderTextColor={colors.textSecondary}
-                          secureTextEntry
                           autoCapitalize="none"
                           autoCorrect={false}
                           // "none" for the same reason as the server password field

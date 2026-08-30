@@ -23,6 +23,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { useToast } from '@/context/ToastContext';
 import { FocusAwareStatusBar } from '@/components/FocusAwareStatusBar';
 import { InputModal } from '@/components/InputModal';
+import { ConfirmModal } from '@/components/ConfirmModal';
 import { EmptyState } from '@/components/EmptyState';
 import { OptionPicker, OptionPickerItem } from '@/components/OptionPicker';
 import { torrentsApi } from '@/services/api/torrents';
@@ -33,6 +34,19 @@ import { spacing, borderRadius } from '@/constants/spacing';
 import { shadows } from '@/constants/shadows';
 import { getErrorMessage } from '@/utils/error';
 import { FileSortMode, isFileSortMode, sortTorrentFiles } from '@/utils/file-sort';
+import {
+  PrioritySnapshot,
+  capturePriorities,
+  groupByPriority,
+  needsDeselectConfirm,
+} from '@/utils/file-priority';
+
+/**
+ * How long the Undo stays reachable. Deliberately longer than the toast
+ * default, which is tuned for reading a message rather than deciding to act on
+ * one — an undo the user cannot reach in time is worse than no undo.
+ */
+const UNDO_DURATION = 7000;
 
 interface FileTreeItem {
   type: 'file' | 'folder';
@@ -66,6 +80,11 @@ export default function TorrentFilesScreen() {
   const [inputModalVisible, setInputModalVisible] = useState(false);
   const [sortMode, setSortMode] = useState<FileSortMode>('torrent');
   const [sortPickerVisible, setSortPickerVisible] = useState(false);
+  // A folder deselection waiting on confirmation — see needsDeselectConfirm.
+  const [pendingDeselect, setPendingDeselect] = useState<{
+    path: string;
+    indices: number[];
+  } | null>(null);
   const [inputModalConfig, setInputModalConfig] = useState<{
     title: string;
     message?: string;
@@ -157,13 +176,58 @@ export default function TorrentFilesScreen() {
   };
 
   const handleSelectAll = async () => {
-    if (updating) return;
+    await selectFiles(
+      files.map((f) => f.index),
+      'toast.allFilesSelected',
+    );
+  };
+
+  /** Put back exactly what a deselection replaced — see utils/file-priority.ts. */
+  const restorePriorities = async (snapshot: PrioritySnapshot) => {
     try {
       setUpdating(true);
-      const allIndices = files.map((f) => f.index);
-      await torrentsApi.setFilePriority(hash, allIndices, 1);
+      // One request per distinct priority: filePrio takes a single value per call.
+      for (const group of groupByPriority(snapshot)) {
+        await torrentsApi.setFilePriority(hash, group.indices, group.priority);
+      }
       await loadFiles();
-      showToast(t('toast.allFilesSelected'), 'success');
+    } catch (error: unknown) {
+      showToast(getErrorMessage(error), 'error');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  /**
+   * Set files to priority 0 and offer an Undo, which is the whole point: a
+   * mistaken tap costs one more tap instead of a rebuilt selection.
+   */
+  const deselectFiles = async (fileIndices: number[]) => {
+    if (updating || fileIndices.length === 0) return;
+    // Read the old priorities BEFORE the write — loadFiles() will overwrite them.
+    const snapshot = capturePriorities(files, fileIndices);
+    try {
+      setUpdating(true);
+      await torrentsApi.setFilePriority(hash, fileIndices, 0);
+      await loadFiles();
+      showToast(t('toast.filesDeselected', { count: fileIndices.length }), 'info', UNDO_DURATION, {
+        label: t('common.undo'),
+        onPress: () => void restorePriorities(snapshot),
+      });
+    } catch (error: unknown) {
+      showToast(getErrorMessage(error), 'error');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const selectFiles = async (fileIndices: number[], toastKey?: string) => {
+    if (updating || fileIndices.length === 0) return;
+    try {
+      setUpdating(true);
+      await torrentsApi.setFilePriority(hash, fileIndices, 1);
+      await loadFiles();
+      if (toastKey) showToast(t(toastKey), 'success');
     } catch (error: unknown) {
       showToast(getErrorMessage(error), 'error');
     } finally {
@@ -172,50 +236,34 @@ export default function TorrentFilesScreen() {
   };
 
   const handleDeselectAll = async () => {
-    if (updating) return;
-    try {
-      setUpdating(true);
-      const allIndices = files.map((f) => f.index);
-      await torrentsApi.setFilePriority(hash, allIndices, 0);
-      await loadFiles();
-      showToast(t('toast.allFilesDeselected'), 'success');
-    } catch (error: unknown) {
-      showToast(getErrorMessage(error), 'error');
-    } finally {
-      setUpdating(false);
-    }
+    await deselectFiles(files.map((f) => f.index));
   };
 
   const handleFileToggle = async (file: TorrentFile) => {
-    if (updating) return;
-    try {
-      setUpdating(true);
-      const newPriority: FilePriority = file.priority === 0 ? 1 : 0;
-      await torrentsApi.setFilePriority(hash, [file.index], newPriority);
-      await loadFiles();
-    } catch (error: unknown) {
-      showToast(getErrorMessage(error), 'error');
-    } finally {
-      setUpdating(false);
+    if (file.priority === 0) {
+      await selectFiles([file.index]);
+    } else {
+      await deselectFiles([file.index]);
     }
   };
 
   const handleFolderToggle = async (folderPath: string, fileIndices: number[]) => {
     if (updating) return;
-    try {
-      setUpdating(true);
-      // Check if all files in folder are selected
-      const folderFiles = files.filter((f) => fileIndices.includes(f.index));
-      const allSelected = folderFiles.every((f) => f.priority > 0);
-      const newPriority: FilePriority = allSelected ? 0 : 1;
+    const folderFiles = files.filter((f) => fileIndices.includes(f.index));
+    const allSelected = folderFiles.every((f) => f.priority > 0);
 
-      await torrentsApi.setFilePriority(hash, fileIndices, newPriority);
-      await loadFiles();
-    } catch (error: unknown) {
-      showToast(getErrorMessage(error), 'error');
-    } finally {
-      setUpdating(false);
+    if (!allSelected) {
+      await selectFiles(fileIndices);
+      return;
     }
+
+    // Turning off a whole season pack is worth a pause; a single file is not.
+    // Below the threshold the Undo toast already covers the mistake.
+    if (needsDeselectConfirm(fileIndices.length)) {
+      setPendingDeselect({ path: folderPath, indices: fileIndices });
+      return;
+    }
+    await deselectFiles(fileIndices);
   };
 
   const handleFolderExpand = (folderPath: string) => {
@@ -609,6 +657,7 @@ export default function TorrentFilesScreen() {
                         style={styles.folderCheckbox}
                         onPress={() => handleFolderToggle(item.path, item.fileIndices!)}
                         disabled={updating}
+                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 2 }}
                         accessibilityLabel={
                           item.allSelected
                             ? t('screens.files.deselectFolder')
@@ -681,6 +730,7 @@ export default function TorrentFilesScreen() {
                       style={styles.fileCheckbox}
                       onPress={() => handleFileToggle(file)}
                       disabled={updating}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 2 }}
                       accessibilityLabel={
                         file.priority === 0
                           ? t('screens.files.selectFile')
@@ -954,6 +1004,27 @@ export default function TorrentFilesScreen() {
           onSelect={handleSelectSortMode}
           onClose={() => setSortPickerVisible(false)}
         />
+
+        <ConfirmModal
+          visible={pendingDeselect !== null}
+          title={t('alerts.deselectFolderTitle')}
+          message={t('alerts.deselectFolderMessage', {
+            count: pendingDeselect?.indices.length ?? 0,
+          })}
+          buttons={[
+            {
+              label: t('actions.deselect'),
+              destructive: true,
+              onPress: () => {
+                const target = pendingDeselect;
+                setPendingDeselect(null);
+                if (target) void deselectFiles(target.indices);
+              },
+            },
+          ]}
+          cancelLabel={t('common.cancel')}
+          onCancel={() => setPendingDeselect(null)}
+        />
       </SafeAreaView>
     </>
   );
@@ -1029,7 +1100,7 @@ const styles = StyleSheet.create({
   },
   folderCheckbox: {
     padding: 8,
-    paddingRight: 6,
+    paddingRight: spacing.sm,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1064,7 +1135,7 @@ const styles = StyleSheet.create({
   },
   fileCheckbox: {
     padding: 8,
-    paddingRight: 6,
+    paddingRight: spacing.sm,
     justifyContent: 'center',
     alignItems: 'center',
   },

@@ -26,7 +26,10 @@
     "off": "OFF",
     "back": "Retour",
     "clearSearch": "Effacer la recherche",
-    "moreInfo": "Plus d'informations"
+    "moreInfo": "Plus d'informations",
+    "undo": "Annuler",
+    "showPassword": "Afficher le mot de passe",
+    "hidePassword": "Masquer le mot de passe"
   },
   "screens": {
     "torrents": {
@@ -724,7 +727,8 @@
     "shareRatio": "Ratio de partage",
     "globalSpeedLimit": "Limite de vitesse globale ({{status}})",
     "trackers": "Trackers",
-    "exportTorrent": "Exporter le .torrent"
+    "exportTorrent": "Exporter le .torrent",
+    "deselect": "Désélectionner"
   },
   "alerts": {
     "deleteTorrent": "Supprimer le torrent ?",
@@ -743,7 +747,9 @@
     "deleteFolder": "Supprimer le dossier ?",
     "deleteFolderMessage": "Cela supprime le dossier et tous les flux qu'il contient de qBittorrent.",
     "deleteRule": "Supprimer la règle ?",
-    "deleteRuleMessage": "Cela supprime la règle de téléchargement automatique de qBittorrent. Elle cesse immédiatement de correspondre aux nouveaux articles."
+    "deleteRuleMessage": "Cela supprime la règle de téléchargement automatique de qBittorrent. Elle cesse immédiatement de correspondre aux nouveaux articles.",
+    "deselectFolderTitle": "Désélectionner ce dossier ?",
+    "deselectFolderMessage": "Le téléchargement de ses {{count}} fichiers sera arrêté."
   },
   "server": {
     "serverInfo": "INFO SERVEUR",
@@ -1022,7 +1028,8 @@
     "uncategorized": "Non catégorisé",
     "tags": "Étiquettes",
     "tagsCount": "Étiquettes ({{count}})",
-    "untagged": "Sans étiquette"
+    "untagged": "Sans étiquette",
+    "queued": "File d'attente"
   },
   "sort": {
     "dateAdded": "Date",
@@ -1091,7 +1098,6 @@
     "serverSettingUpdated": "Paramètre du serveur mis à jour",
     "savePathSavedLocally": "Enregistré localement. Connectez-vous à un serveur pour mettre à jour sur qBittorrent.",
     "allFilesSelected": "Tous les fichiers sélectionnés pour le téléchargement",
-    "allFilesDeselected": "Toutes les sélections annulées",
     "prioritySet": "Priorité définie sur {{label}}",
     "prioritySetForCount": "Priorité définie sur {{label}} pour {{count}} fichier(s)",
     "fileSelected": "Fichier sélectionné : {{name}}",
@@ -1106,7 +1112,8 @@
     "exportTorrentFailed": "Impossible d'exporter le fichier .torrent",
     "downloadComplete": "Téléchargement terminé",
     "downloadsComplete": "{{total}} téléchargements terminés",
-    "downloadsCompleteBody": "{{name}} et {{others}} autres"
+    "downloadsCompleteBody": "{{name}} et {{others}} autres",
+    "filesDeselected": "{{count}} fichier(s) désélectionné(s)"
   },
   "errors": {
     "generic": "Une erreur s'est produite",

@@ -375,6 +375,9 @@ nested under `advanced`, not on the hub.
 - **`ToastContext.tsx`** + `components/Toast.tsx` — the global toast is a plain
   view. **Never wrap it in an RN `<Modal>`** — a Modal captures all touches and
   freezes the UI. Native-modal-sheet screens mount `ModalToast` locally instead.
+  `showToast(message, type, duration, action)` takes an optional `ToastAction`
+  (`{ label, onPress }`) that renders as a button — the Undo affordance. Pass an
+  explicit `duration` with it: the default is tuned for reading, not deciding.
 - **`ThemeContext.tsx`** — `useTheme()`, the `colors` object, user overrides.
 - **`ApiVersionContext.tsx`** — detected qBittorrent API version → feature gating
   through `utils/apiVersion.ts`.
@@ -426,6 +429,10 @@ All PascalCase function components taking a `…Props` interface.
   `utils/customHeaders.ts`).
 - **Visuals** — `SpeedGraph`, `CircularProgress`, `AnimatedProgressBar`,
   `AnimatedButton`, `Confetti`.
+- **Inputs** — `SecureTextInput` (masked field plus a reveal button; renders as
+  a fragment so it drops into an existing `inputRow` and the caller's `style`
+  keeps working. Used by all six secret fields on the add/edit server screens —
+  password, API key, proxy password. Reveal state is local and resets on mount).
 - **Chrome / diagnostics** — `FocusAwareStatusBar`, `SettingRow`,
   `QuickConnectPanel`, `LogViewer`, `DebugRow`, `SuperDebugPanel`,
   `UpdateSection` (the Android Updates card on the About screen; renders
@@ -553,6 +560,13 @@ Thin objects over `apiClient`.
   (`defaultConfig.ndk.abiFilters` does **not** work — RN's Gradle plugin
   overwrites it later and the APK silently keeps all four). Throws at prebuild
   time if the template's anchors move.
+- **`scripts/render-logo.py`** — regenerates every icon asset from primitives
+  at 4x supersampling (needs Pillow). The roles have contradictory needs, so
+  they are separate files: `icon.png` is opaque (iOS rejects alpha on the app
+  icon), `adaptive-icon.png` is transparent with the mark inside the middle 60%
+  (Android only guarantees 61% survives every launcher mask), and
+  `notification-icon.png` is alpha-only (Android discards the colours and
+  repaints it). Re-run it rather than editing a PNG by hand.
 - **`scripts/_android-env.sh`** — shared: SDK detection, `local.properties`
   (forward slashes — see the file), Gradle JVM args (the Windows TLS-inspection
   workaround), prebuild-freshness check, `adb` resolution and install.
@@ -644,6 +658,14 @@ normalised name only: plugins reconstruct sizes from scraped text, so two
 listings of one release routinely differ by megabytes. Best-seeded listing
 wins; behind the `dedupeSearchResults` preference) ·
 `save-paths.ts` (`getKnownSavePaths`, derived from live data — no API call) ·
+`file-priority.ts` (`capturePriorities` / `groupByPriority` — the undo behind
+the file browser's checkboxes. A deselection goes through immediately and is
+taken back from the toast instead of being confirmed, which would tax the
+deliberate case to guard the accidental one. The restore replays the **exact**
+prior priorities: files sitting on High (6) or Maximum (7) must not come back
+as Normal. `torrents/filePrio` takes one priority per request, so the restore
+is one call per distinct priority, not per file. `needsDeselectConfirm` keeps a
+confirmation for folders over five files, where a toast is too late) ·
 `file-sort.ts` (`sortTorrentFiles` — ordering for the torrent file browser.
 Not a flat `.sort()`: the browser injects a folder header the first time it
 meets a file under that folder, so every folder's files must stay contiguous.
